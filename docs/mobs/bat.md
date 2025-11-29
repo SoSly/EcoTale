@@ -77,8 +77,6 @@ Players who pay attention will never lose a colony by accident. The warning sign
 
 Abandoned roosts are not permanently lost. When a roost reaches 0 stress and stays there for a sustained period, a new colony of 1-4 bats spawns. This applies to both natural and crafted roosts.
 
----
-
 ## Retrofit System
 
 For existing worlds without naturally-generated colonies:
@@ -88,3 +86,48 @@ For existing worlds without naturally-generated colonies:
 - Place in suitable caves (dark, sufficient space, away from other colonies)
 - When stress reaches 0 and stays there, a new colony spawns
 - This shifts the fantasy from "discover and protect" to "build and cultivate"
+
+## Tuning Notes
+
+Implementation details and balance formulas.
+
+### Stress Formula
+
+Stress accumulates when players are nearby (checked every 20 ticks):
+
+```
+stress += (light_level + 1) * (CONFIGURABLE_DETECTION_RANGE - dist3d)
+```
+
+Stress decays when no player is in range, inversely proportional to light level. Dark caves recover quickly; lit caves remain stressed.
+
+**Balance targets:**
+- Brief harvesting visits should not trigger agitation
+- Permanent light installations near roosts should cause slow but inevitable colony loss
+- Decay in darkness should be fast enough that occasional visits are sustainable
+- Decay from max stress should be slow enough that losing your colony hurts
+- Even at 0 stress, it takes time for a roost to repopulate
+- `CONFIGURABLE_DETECTION_RANGE` and stress thresholds should be exposed for server/modpack customization
+
+### Gunpowder Economy
+
+Guano-smelted gunpowder provides a sustainable source for casual and peaceful players but should not replace creeper farms for technical players.
+
+**Balance targets:**
+- Guano production rate caps well below technical demand
+- Colony size limits total output per roost
+- Stress system prevents exploitation through constant presence
+
+### Farm Size Incentives
+
+The probabilistic pollination system naturally balances farm scaling:
+- Bat visits spread across total farm area
+- Small farms receive more visits per block than large farms with the same colony
+- Combined with bolting and harvest timing, this rewards engagement without explicit penalties for larger builds
+
+### Mob Dampening Scope
+
+**Balance targets:**
+- Strong enough that players feel safe observing night behavior
+- Does not eliminate hostile mobs entirely (just reduces spawn rates)
+- Scales with colony size to reward conservation
