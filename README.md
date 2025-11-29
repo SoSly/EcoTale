@@ -13,15 +13,11 @@ Inspired by Klei_Wright's [Why Mojang Struggles to design Ecologies](https://you
 
 ## Vision
 
-<!-- TODO: Expanded vision statement describing the mod's goals and inspiration -->
+Conservation over exploitation. EcoTale rewards intuitive, humane choices with mechanical advantages—thoughtful stewardship should always outperform factory farming. Environmental actors have autonomous behaviors that create a living world rather than a static resource pool.
 
 ## Current Features
-**This mod is in early alpha. All features are subject to change and iteration.**
 
-<!-- TODO: Feature summary -->
-
-### Getting Started
-<!-- TODO: Quick start guide -->
+None yet. This mod is in early development.
 
 ## Requirements
 - **Minecraft:** 1.20.1
@@ -29,7 +25,7 @@ Inspired by Klei_Wright's [Why Mojang Struggles to design Ecologies](https://you
 
 ## Development
 
-Track what's coming in the [roadmap](ROADMAP.md), see what's changed in the [changelog](CHANGELOG.md), or follow current work on our [project board](https://github.com/orgs/SoSly/projects/<!-- TODO: project number -->).
+Track what's coming in the [roadmap](ROADMAP.md) or see what's changed in the [changelog](CHANGELOG.md).
 
 ## License
 
