@@ -1,7 +1,7 @@
 # EcoTale
 
 [![Discord](https://img.shields.io/discord/1426270854786060320?logo=discord&color=7289da&label=Discord)](https://discord.gg/HDTmTS6G)
-[![Build & Test](https://github.com/SoSly/EcoTale/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/SoSly/EcoTale/actions/workflows/build-and-test.yaml)
+[![Build](https://github.com/SoSly/EcoTale/actions/workflows/build.yml/badge.svg)](https://github.com/SoSly/EcoTale/actions/workflows/build.yml)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-green)
 [![NeoForge](https://img.shields.io/badge/NeoForge-47.1.100-orange)](https://neoforged.net/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
