@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.sosly.ecotale.blocks.BlockEntityRegistry;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.items.ItemRegistry;
+import org.sosly.ecotale.worldgen.FeatureRegistry;
 
 @Mod(EcoTale.MOD_ID)
 public class EcoTale {
@@ -21,6 +22,7 @@ public class EcoTale {
         BlockRegistry.register(modEventBus);
         BlockEntityRegistry.register(modEventBus);
         ItemRegistry.register(modEventBus);
+        FeatureRegistry.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);
         LOGGER.info("EcoTale initialized");

@@ -9,7 +9,7 @@ Establish bat colonies as functional ecosystem actors. Players discover colonies
 
 - [x] Guano blocks exist with layers similar to snow blocks
 - [x] Roost blocks exist for every stone type (shaped recipe: stone + 8 guano)
-- [ ] Roosts are generated during worldgen; guano is generated below them
+- [x] Roosts are generated during worldgen; guano is generated below them
 - [ ] Bat AI overhaul (pathfinding, daily cycles, roosting)
 - [ ] Remove ambient bats; roosts spawn bats when not stressed
 - [ ] Stress system and colony states
