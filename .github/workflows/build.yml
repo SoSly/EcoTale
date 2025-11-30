@@ -24,5 +24,8 @@ jobs:
       - name: Run checkstyle
         run: chmod +x ./gradlew && ./gradlew checkstyleMain
 
+      - name: Run datagen
+        run: ./gradlew runData
+
       - name: Build
         run: ./gradlew build -x test

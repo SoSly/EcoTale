@@ -1,7 +1,9 @@
 package org.sosly.ecotale.blocks;
 
+import net.minecraft.advancements.critereon.StatePropertiesPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelAccessor;
@@ -13,11 +15,26 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
+import net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition;
+import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.client.model.generators.BlockStateProvider;
+import net.minecraftforge.client.model.generators.ConfiguredModel;
+import net.minecraftforge.client.model.generators.ModelFile;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.sosly.ecotale.api.IBlockStateGenerating;
+import org.sosly.ecotale.api.ILootTableGenerating;
+import org.sosly.ecotale.items.ItemRegistry;
 
-public class GuanoLayerBlock extends Block {
+import java.util.function.BiConsumer;
+
+public class GuanoLayerBlock extends Block implements IBlockStateGenerating, ILootTableGenerating {
     public static final int MAX_HEIGHT = 8;
     public static final IntegerProperty LAYERS = BlockStateProperties.LAYERS;
 
@@ -114,5 +131,44 @@ public class GuanoLayerBlock extends Block {
             return true;
         }
         return Block.isFaceFull(belowState.getCollisionShape(level, pos.below()), Direction.UP);
+    }
+
+    @Override
+    public void generateBlockState(BlockStateProvider provider) {
+        String blockName = ForgeRegistries.BLOCKS.getKey(this).getPath();
+        ResourceLocation texture = new ResourceLocation("minecraft", "block/mycelium_top");
+
+        provider.getVariantBuilder(this).forAllStates(state -> {
+            int layers = state.getValue(LAYERS);
+            int height = layers * 2;
+
+            ModelFile model;
+            if (layers == MAX_HEIGHT) {
+                model = provider.models().cubeAll(blockName + "_height16", texture);
+            } else {
+                model = provider.models()
+                        .withExistingParent(blockName + "_height" + height, "minecraft:block/snow_height" + height)
+                        .texture("texture", texture)
+                        .texture("particle", texture);
+            }
+            return ConfiguredModel.builder().modelFile(model).build();
+        });
+    }
+
+    @Override
+    public void generateLootTable(Block block, BiConsumer<Block, LootTable.Builder> register) {
+        LootItem.Builder<?> itemBuilder = LootItem.lootTableItem(ItemRegistry.GUANO.get());
+
+        for (int i = 1; i <= MAX_HEIGHT; i++) {
+            itemBuilder.apply(SetItemCountFunction.setCount(ConstantValue.exactly((float) i))
+                    .when(LootItemBlockStatePropertyCondition.hasBlockStateProperties(block)
+                            .setProperties(StatePropertiesPredicate.Builder.properties()
+                                    .hasProperty(LAYERS, i))));
+        }
+
+        register.accept(block, LootTable.lootTable()
+                .withPool(LootPool.lootPool()
+                        .setRolls(ConstantValue.exactly(1.0F))
+                        .add(itemBuilder)));
     }
 }

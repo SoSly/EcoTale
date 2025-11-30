@@ -1,17 +1,30 @@
 package org.sosly.ecotale.items;
 
+import net.minecraft.advancements.critereon.InventoryChangeTrigger;
 import net.minecraft.core.BlockPos;
+import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
+import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BoneMealItem;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.sosly.ecotale.EcoTale;
+import org.sosly.ecotale.api.IRecipeGenerating;
 
-public class GuanoItem extends BlockItem {
+import java.util.function.Consumer;
+
+public class GuanoItem extends BlockItem implements IRecipeGenerating {
     public GuanoItem(Block block, Properties properties) {
         super(block, properties);
     }
@@ -33,5 +46,22 @@ public class GuanoItem extends BlockItem {
         }
 
         return super.useOn(context);
+    }
+
+    @Override
+    public void generateRecipes(Consumer<FinishedRecipe> writer, RecipeProvider provider) {
+        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, Items.BROWN_DYE)
+                .requires(this)
+                .unlockedBy("has_guano", InventoryChangeTrigger.TriggerInstance.hasItems(this))
+                .save(writer, new ResourceLocation(EcoTale.MOD_ID, "brown_dye_from_guano"));
+
+        SimpleCookingRecipeBuilder.smelting(
+                        Ingredient.of(this),
+                        RecipeCategory.MISC,
+                        Items.GUNPOWDER,
+                        0.1F,
+                        200)
+                .unlockedBy("has_guano", InventoryChangeTrigger.TriggerInstance.hasItems(this))
+                .save(writer, new ResourceLocation(EcoTale.MOD_ID, "gunpowder_from_guano"));
     }
 }

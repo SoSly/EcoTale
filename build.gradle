@@ -31,6 +31,12 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+configurations {
+    devMods
+    clientClasspath.extendsFrom devMods
+    serverClasspath.extendsFrom devMods
+}
+
 sourceSets {
     main {
         java {
@@ -110,9 +116,8 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.8.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
 
-    // Optional runtime dependencies for development and testing
     runtimeOnly fg.deobf("curse.maven:jei-${jei_projectId}:${jei_fileId}")
-    runtimeOnly fg.deobf("curse.maven:journeymap-${journeymap_projectId}:${journeymap_fileId}")
+    devMods fg.deobf("curse.maven:journeymap-${journeymap_projectId}:${journeymap_fileId}") // NPE on Minecraft.getInstance() during datagen
 }
 
 tasks.withType(ProcessResources).configureEach {

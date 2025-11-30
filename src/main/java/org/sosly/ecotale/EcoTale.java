@@ -6,6 +6,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
+import org.sosly.ecotale.blocks.BlockEntityRegistry;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.items.ItemRegistry;
 
@@ -18,6 +19,7 @@ public class EcoTale {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         BlockRegistry.register(modEventBus);
+        BlockEntityRegistry.register(modEventBus);
         ItemRegistry.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);

@@ -2,5 +2,12 @@
   "itemGroup.ecotale": "EcoTale",
   "item.ecotale.guano": "Guano",
   "block.ecotale.guano": "Guano",
-  "block.ecotale.guano_block": "Guano Block"
+  "block.ecotale.guano_block": "Guano Block",
+  "block.ecotale.stone_roost": "Stone Roost",
+  "block.ecotale.deepslate_roost": "Deepslate Roost",
+  "block.ecotale.blackstone_roost": "Blackstone Roost",
+  "block.ecotale.basalt_roost": "Basalt Roost",
+  "block.ecotale.tuff_roost": "Tuff Roost",
+  "block.ecotale.calcite_roost": "Calcite Roost",
+  "block.ecotale.dripstone_roost": "Dripstone Roost"
 }

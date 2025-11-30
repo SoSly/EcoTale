@@ -8,7 +8,7 @@ The first EcoTale release focuses on bats as a proof-of-concept for the mod's co
 Establish bat colonies as functional ecosystem actors. Players discover colonies, harvest guano, and learn the stress system through natural feedback.
 
 - [x] Guano blocks exist with layers similar to snow blocks
-- [ ] Roosts blocks exist for every stone type (shaped recipe: stone + 8 guano)
+- [x] Roost blocks exist for every stone type (shaped recipe: stone + 8 guano)
 - [ ] Roosts are generated during worldgen; guano is generated below them
 - [ ] Bat AI overhaul (pathfinding, daily cycles, roosting)
 - [ ] Remove ambient bats; roosts spawn bats when not stressed
