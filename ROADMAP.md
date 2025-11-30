@@ -25,3 +25,13 @@ Connect bats to farming and nighttime safety. Healthy colonies provide passive b
 - [ ] Bats seed empty farmland with random crops
 - [ ] Bats reduce hostile mob spawns in chunks they have visited
 - [ ] Phantoms do not spawn within a certain radius of bats 
+
+### Configuration and Polish
+Finalize the bat system with proper configuration options, complete assets, and version compatibility.
+
+- [ ] Add config file for roost tuning (detection range, stress thresholds, decay rates, colony size)
+- [ ] Add config for bat behavior tuning (crop detection, crop growth, hostile mob spawn reduction, phantom spawn elimination, seed spreading, guano production)
+- [ ] Create guano block textures
+- [ ] Create guano item texture
+- [ ] Create roost block textures for each stone variant
+- [ ] Add support for Minecraft 1.21.10 / NeoForge 21.10.x
