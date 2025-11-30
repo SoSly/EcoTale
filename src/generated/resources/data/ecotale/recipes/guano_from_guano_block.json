@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "ecotale:guano_block" }
+  ],
+  "result": {
+    "item": "ecotale:guano",
+    "count": 8
+  }
+}

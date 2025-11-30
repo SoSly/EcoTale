@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/snow_height2",
+  "textures": {
+    "texture": "minecraft:block/mycelium_top",
+    "particle": "minecraft:block/mycelium_top"
+  }
+}

@@ -1,3 +1,6 @@
 {
-  "itemGroup.ecotale": "EcoTale"
+  "itemGroup.ecotale": "EcoTale",
+  "item.ecotale.guano": "Guano",
+  "block.ecotale.guano": "Guano",
+  "block.ecotale.guano_block": "Guano Block"
 }
