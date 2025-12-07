@@ -9,10 +9,21 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.EntityRegistry;
+import org.sosly.ecotale.navigation.FlowFieldSolution;
 
 public class RoostBlockEntity extends BlockEntity {
+    private FlowFieldSolution flowFieldSolution;
+
     public RoostBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityRegistry.ROOST.get(), pos, state);
+    }
+
+    public FlowFieldSolution getFlowFieldSolution() {
+        return flowFieldSolution;
+    }
+
+    public void setFlowFieldSolution(FlowFieldSolution solution) {
+        this.flowFieldSolution = solution;
     }
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {

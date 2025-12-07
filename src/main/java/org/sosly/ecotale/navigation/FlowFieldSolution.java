@@ -3,6 +3,7 @@ package org.sosly.ecotale.navigation;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -92,5 +93,21 @@ public class FlowFieldSolution {
      */
     public boolean isValid(Level level) {
         return true;
+    }
+
+    public void forEachOutwardCell(BiConsumer<FlowFieldCell, Vec3> consumer) {
+        outwardField.forEach(consumer);
+    }
+
+    public void forEachInwardCell(BiConsumer<FlowFieldCell, Vec3> consumer) {
+        inwardField.forEach(consumer);
+    }
+
+    public int getOutwardCellCount() {
+        return outwardField.size();
+    }
+
+    public int getInwardCellCount() {
+        return inwardField.size();
     }
 }
