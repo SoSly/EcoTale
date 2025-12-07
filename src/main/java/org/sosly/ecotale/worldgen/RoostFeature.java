@@ -38,7 +38,7 @@ public class RoostFeature extends Feature<NoneFeatureConfiguration> implements I
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_DEPTH_BELOW_SURFACE = 30;
     private static final int MAX_GUANO_LAYERS = 5;
-    private static final int ATTEMPTS_PER_CHUNK = 10;
+    private static final int ATTEMPTS_PER_CHUNK = 1;
 
     public static final ResourceKey<ConfiguredFeature<?, ?>> CONFIGURED_KEY =
             ResourceKey.create(Registries.CONFIGURED_FEATURE, new ResourceLocation(EcoTale.MOD_ID, "roost"));

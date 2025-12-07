@@ -16,6 +16,7 @@ import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
 import org.sosly.ecotale.entities.ai.Schedules;
 import org.sosly.ecotale.entities.ai.SensorTypes;
 import org.sosly.ecotale.items.ItemRegistry;
+import org.sosly.ecotale.network.NetworkHandler;
 import org.sosly.ecotale.worldgen.FeatureRegistry;
 
 @Mod(EcoTale.MOD_ID)
@@ -35,6 +36,8 @@ public class EcoTale {
         SensorTypes.register(modEventBus);
         Activities.register(modEventBus);
         Schedules.register(modEventBus);
+
+        NetworkHandler.register();
 
         modEventBus.addListener(this::onEntityAttributeCreation);
 
