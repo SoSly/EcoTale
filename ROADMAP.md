@@ -10,10 +10,20 @@ Establish bat colonies as functional ecosystem actors. Players discover colonies
 - [x] Guano blocks exist with layers similar to snow blocks
 - [x] Roost blocks exist for every stone type (shaped recipe: stone + 8 guano)
 - [x] Roosts are generated during worldgen; guano is generated below them
-- [ ] Bat AI overhaul (pathfinding, daily cycles, roosting)
-- [ ] Remove ambient bats; roosts spawn bats when not stressed
+- [ ] Bat AI overhaul
+  - [x] EcoTaleBat entity with Brain system (extends vanilla Bat for instanceof compatibility)
+  - [x] Memory and sensor registration (home roost, colony state)
+  - [ ] FlyingPathNavigation for cave navigation
+  - [x] Daily cycle behaviors (rest at roost during day, forage at night, return at dawn)
+- [ ] Roost colony management
+  - [x] Suppress vanilla bat spawns; roosts are the only bat source
+  - [x] RoostBlockEntity spawns and tracks colony (1-4 bats)
+  - [x] Bats query home roost for state; homeless bats despawn
 - [ ] Stress system and colony states
-- [ ] Guano production and harvesting
+  - [ ] Stress accumulates from player proximity, decays when alone
+  - [ ] Colony states (CALM → AGITATED → DISRUPTED → ABANDONED) with visual/audio feedback
+  - [ ] ABANDONED colonies despawn; roost goes dormant until stress recovers
+- [x] Guano production and harvesting
 - [x] Guano uses (bone meal, brown dye, gunpowder)
 
 ### Ecosystem Integration

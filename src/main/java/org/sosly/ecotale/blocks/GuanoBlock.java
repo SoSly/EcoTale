@@ -7,6 +7,7 @@ import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
@@ -24,7 +25,7 @@ import org.sosly.ecotale.items.ItemRegistry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class GuanoBlock extends Block
+public class GuanoBlock extends FallingBlock
         implements IBlockStateGenerating, IItemModelGenerating, ILootTableGenerating, IRecipeGenerating {
 
     public GuanoBlock(Properties properties) {

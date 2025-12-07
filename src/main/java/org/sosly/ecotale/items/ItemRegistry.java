@@ -6,12 +6,14 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.sosly.ecotale.EcoTale;
 import org.sosly.ecotale.blocks.BlockRegistry;
+import org.sosly.ecotale.entities.EntityRegistry;
 
 public class ItemRegistry {
     public static final DeferredRegister<Item> ITEMS =
@@ -47,6 +49,9 @@ public class ItemRegistry {
     public static final RegistryObject<Item> DRIPSTONE_ROOST = ITEMS.register("dripstone_roost",
             () -> new BlockItem(BlockRegistry.DRIPSTONE_ROOST.get(), new Item.Properties()));
 
+    public static final RegistryObject<Item> BAT_SPAWN_EGG = ITEMS.register("bat_spawn_egg",
+            () -> new ForgeSpawnEggItem(EntityRegistry.BAT, 0x4C3E30, 0x0F0F0F, new Item.Properties()));
+
     public static final RegistryObject<CreativeModeTab> ECOTALE_TAB = CREATIVE_TABS.register("ecotale",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.ecotale"))
@@ -61,6 +66,7 @@ public class ItemRegistry {
                         output.accept(TUFF_ROOST.get());
                         output.accept(CALCITE_ROOST.get());
                         output.accept(DRIPSTONE_ROOST.get());
+                        output.accept(BAT_SPAWN_EGG.get());
                     })
                     .build());
 

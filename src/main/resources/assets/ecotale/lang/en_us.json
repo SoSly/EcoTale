@@ -1,6 +1,8 @@
 {
   "itemGroup.ecotale": "EcoTale",
   "item.ecotale.guano": "Guano",
+  "item.ecotale.bat_spawn_egg": "Bat Spawn Egg",
+  "entity.ecotale.bat": "Bat",
   "block.ecotale.guano": "Guano",
   "block.ecotale.guano_block": "Guano Block",
   "block.ecotale.stone_roost": "Stone Roost",

@@ -4,12 +4,13 @@ import net.minecraft.advancements.critereon.StatePropertiesPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -34,7 +35,7 @@ import org.sosly.ecotale.items.ItemRegistry;
 
 import java.util.function.BiConsumer;
 
-public class GuanoLayerBlock extends Block implements IBlockStateGenerating, ILootTableGenerating {
+public class GuanoLayerBlock extends FallingBlock implements IBlockStateGenerating, ILootTableGenerating {
     public static final int MAX_HEIGHT = 8;
     public static final IntegerProperty LAYERS = BlockStateProperties.LAYERS;
 
@@ -95,14 +96,16 @@ public class GuanoLayerBlock extends Block implements IBlockStateGenerating, ILo
 
     @Override
     public boolean canBeReplaced(BlockState state, BlockPlaceContext context) {
-        int layers = state.getValue(LAYERS);
-        if (context.getItemInHand().is(this.asItem()) && layers < MAX_HEIGHT) {
-            if (context.replacingClickedOnBlock()) {
-                return context.getClickedFace() == Direction.UP;
-            }
-            return true;
+        if (!context.getItemInHand().is(this.asItem())) {
+            return false;
         }
-        return false;
+        if (state.getValue(LAYERS) >= MAX_HEIGHT) {
+            return false;
+        }
+        if (context.replacingClickedOnBlock()) {
+            return context.getClickedFace() == Direction.UP;
+        }
+        return true;
     }
 
     @Override
@@ -116,21 +119,49 @@ public class GuanoLayerBlock extends Block implements IBlockStateGenerating, ILo
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-        if (direction == Direction.DOWN && !this.canSurvive(state, level, pos)) {
-            return Blocks.AIR.defaultBlockState();
-        }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
-    }
-
-    @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         BlockState belowState = level.getBlockState(pos.below());
         if (belowState.is(this) && belowState.getValue(LAYERS) == MAX_HEIGHT) {
             return true;
         }
         return Block.isFaceFull(belowState.getCollisionShape(level, pos.below()), Direction.UP);
+    }
+
+    @Override
+    protected void falling(FallingBlockEntity entity) {
+        entity.disableDrop();
+    }
+
+    @Override
+    public void onBrokenAfterFall(Level level, BlockPos pos, FallingBlockEntity entity) {
+        BlockPos targetPos = pos;
+        BlockState targetState = level.getBlockState(targetPos);
+
+        if (!targetState.is(this)) {
+            targetPos = pos.below();
+            targetState = level.getBlockState(targetPos);
+        }
+
+        if (!targetState.is(this)) {
+            entity.spawnAtLocation(this);
+            return;
+        }
+
+        BlockState fallingState = entity.getBlockState();
+        int existingLayers = targetState.getValue(LAYERS);
+        int fallingLayers = fallingState.getValue(LAYERS);
+        int totalLayers = existingLayers + fallingLayers;
+
+        if (totalLayers <= MAX_HEIGHT) {
+            level.setBlock(targetPos, targetState.setValue(LAYERS, totalLayers), Block.UPDATE_ALL);
+        } else {
+            level.setBlock(targetPos, targetState.setValue(LAYERS, MAX_HEIGHT), Block.UPDATE_ALL);
+            int overflow = totalLayers - MAX_HEIGHT;
+            BlockPos abovePos = targetPos.above();
+            if (level.getBlockState(abovePos).isAir()) {
+                level.setBlock(abovePos, this.defaultBlockState().setValue(LAYERS, overflow), Block.UPDATE_ALL);
+            }
+        }
     }
 
     @Override
