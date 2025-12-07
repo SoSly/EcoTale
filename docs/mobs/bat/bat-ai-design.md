@@ -9,20 +9,20 @@ The system should replace vanilla bat's tick-based random movement with a Brain-
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        RoostBlockEntity                         │
-│  - stress: int (accumulates/decays)                            │
-│  - colonyState: enum (CALM, AGITATED, DISRUPTED, ABANDONED)    │
-│  - colonySize: int (1-4 bats)                                  │
-│  - flowField: FlowFieldSolution (shared navigation data)       │
-│  - spawnBats() on first load / stress recovery                 │
+│  - stress: int (accumulates/decays)                             │
+│  - colonyState: enum (CALM, AGITATED, DISRUPTED, ABANDONED)     │
+│  - colonySize: int (1-4 bats)                                   │
+│  - flowField: FlowFieldSolution (shared navigation data)        │
+│  - spawnBats() on first load / stress recovery                  │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               │ bats query stress + flow field via HOME memory
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         EcoTaleBat                              │
-│  extends: net.minecraft.world.entity.ambient.Bat               │
-│  - brain: Brain<EcoTaleBat> with sensors, memories, activities │
-│  - accesses home roost via HOME memory (GlobalPos)             │
+│  extends: net.minecraft.world.entity.ambient.Bat                │
+│  - brain: Brain<EcoTaleBat> with sensors, memories, activities  │
+│  - accesses home roost via HOME memory (GlobalPos)              │
 └─────────────────────────────────────────────────────────────────┘
                               │
             ┌─────────────────┼─────────────────┐
@@ -302,10 +302,9 @@ src/main/java/org/sosly/ecotale/
 │   ├── AbstractRoostBlock.java
 │   └── RoostBlockEntity.java
 ├── navigation/
-│   ├── FlowField.java
+│   ├── FlowFieldCell.java
 │   ├── FlowFieldSolution.java
-│   ├── FlowFieldGenerator.java
-│   └── FlowFieldQueue.java
+│   └── FlowFieldManager.java
 └── events/
     └── EntityEvents.java
 ```

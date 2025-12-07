@@ -47,3 +47,7 @@ A block for fungus cultivation. Original concept: place block, assign species, p
 - No feedback loop
 - No conservation incentive
 - Flagged as Complexity Theater
+
+## Roosts
+
+Do we even need multiple roosts?  What if naturally occurring roosts just sample the adjacent blocks to determine what stone type they should mimic/drop on mining?  We shouldn't allow players to craft or manipulate roosts anyways; that destroys their value.  They can craft Bat Boxes to optimistically provide a new home for bats, instead.

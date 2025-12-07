@@ -11,7 +11,7 @@ Each flow field will be stored on a Roost BlockEntity and consists of two 3D vec
 
 Generation should use flood-fill starting from the destination (exit for outward, roost for inward). Each cell's vector should point toward the neighbor closest to the destination. Fields should be stored sparsely—only cells that are air blocks inside the cave need data.
 
-Resolution can be coarse, one cell per 2-4 blocks. Bats don't need precision.
+Resolution can be coarse, one cell per 4-8 blocks. Bats don't need precision.
 
 During generation, the system should identify exit points—air blocks at the boundary between cave interior and the outside world. For each exit, an elevated position above the terrain at the cave mouth should be found (clear air with no blocks above). These elevated positions should be stored as the actual exit/entrance coordinates. This ensures bats have unobstructed line-of-sight during the handoff between flow field navigation and outdoor flight.
 
@@ -33,7 +33,7 @@ Reasons for failure might include: chunks not loaded, generation taking too long
 
 Bats access the flow field by looking up the Roost BlockEntity at their HOME position. No explicit sharing with bats is needed—once the roost has a solution, its bats can use it.
 
-When a roost successfully generates a flow field solution, it should advertise the solution to other roosts in the same chunk that are within 5 blocks of Y-level (above or below).
+When a roost successfully generates a flow field solution, it should advertise the solution to other roosts that share the same starting cell.
 
 Nearby roosts that receive an advertised solution should adopt it rather than generating their own, reducing redundant computation. They still need to validate that the solution works for their position (the inward field must be reachable from their location).
 
