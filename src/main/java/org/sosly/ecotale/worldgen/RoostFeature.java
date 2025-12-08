@@ -2,6 +2,8 @@ package org.sosly.ecotale.worldgen;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -30,9 +32,6 @@ import org.sosly.ecotale.api.IWorldgenGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.blocks.GuanoLayerBlock;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
-
-import java.util.List;
-import java.util.Map;
 
 public class RoostFeature extends Feature<NoneFeatureConfiguration> implements IWorldgenGenerating {
     private static final Logger LOGGER = LogUtils.getLogger();
