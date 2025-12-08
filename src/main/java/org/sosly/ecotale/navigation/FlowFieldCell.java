@@ -5,10 +5,10 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Represents a coarse grid cell for flow field navigation.
- * Each cell covers an 8x8x8 block region.
+ * Each cell covers a 4x4x4 block region.
  */
 public record FlowFieldCell(int x, int y, int z) {
-    public static final int RESOLUTION = 8;
+    public static final int RESOLUTION = 4;
 
     public static FlowFieldCell fromBlockPos(BlockPos pos) {
         return new FlowFieldCell(

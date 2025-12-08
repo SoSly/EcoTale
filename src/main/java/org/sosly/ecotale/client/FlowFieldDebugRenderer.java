@@ -36,6 +36,18 @@ public final class FlowFieldDebugRenderer {
     private static final float EXIT_G = 1.0f;
     private static final float EXIT_B = 0.2f;
 
+    private static final float CELL_R = 1.0f;
+    private static final float CELL_G = 1.0f;
+    private static final float CELL_B = 0.0f;
+
+    private static final float ROOST_CELL_R = 0.0f;
+    private static final float ROOST_CELL_G = 1.0f;
+    private static final float ROOST_CELL_B = 1.0f;
+
+    private static final float HUB_R = 0.8f;
+    private static final float HUB_G = 0.0f;
+    private static final float HUB_B = 1.0f;
+
     private static final float LINE_ALPHA = 1.0f;
     private static final int EXIT_COLUMN_HEIGHT = 5;
     private static final float LINE_OFFSET = 0.15f;
@@ -97,8 +109,17 @@ public final class FlowFieldDebugRenderer {
     }
 
     private static void renderSolution(BufferBuilder buffer, Matrix4f matrix, FlowFieldSolution solution) {
-        solution.forEachOutwardCell((cell, direction) ->
-            renderCellArrow(buffer, matrix, cell, direction, LINE_OFFSET, OUTWARD_R, OUTWARD_G, OUTWARD_B));
+        BlockPos roostPos = solution.getRoostPos();
+        if (roostPos != null) {
+            FlowFieldCell roostCell = FlowFieldCell.fromBlockPos(roostPos);
+            renderCellBoundingBox(buffer, matrix, roostCell, ROOST_CELL_R, ROOST_CELL_G, ROOST_CELL_B);
+        }
+
+        solution.forEachOutwardCell((cell, direction) -> {
+            renderCellBoundingBox(buffer, matrix, cell, CELL_R, CELL_G, CELL_B);
+            renderCellArrow(buffer, matrix, cell, direction, LINE_OFFSET, OUTWARD_R, OUTWARD_G, OUTWARD_B);
+            solution.getHubPosition(cell).ifPresent(hub -> renderBlockOutline(buffer, matrix, hub, HUB_R, HUB_G, HUB_B));
+        });
 
         solution.forEachInwardCell((cell, direction) ->
             renderCellArrow(buffer, matrix, cell, direction, -LINE_OFFSET, INWARD_R, INWARD_G, INWARD_B));
@@ -204,5 +225,102 @@ public final class FlowFieldDebugRenderer {
 
         buffer.vertex(matrix, x, bottomY, z).color(EXIT_R, EXIT_G, EXIT_B, LINE_ALPHA).endVertex();
         buffer.vertex(matrix, x, topY, z).color(EXIT_R, EXIT_G, EXIT_B, LINE_ALPHA).endVertex();
+    }
+
+    private static void renderBlockOutline(BufferBuilder buffer, Matrix4f matrix, BlockPos pos, float r, float g, float b) {
+        float minX = pos.getX();
+        float minY = pos.getY();
+        float minZ = pos.getZ();
+        float maxX = minX + 1;
+        float maxY = minY + 1;
+        float maxZ = minZ + 1;
+
+        // Bottom face edges
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        // Top face edges
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        // Vertical edges
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+    }
+
+    private static void renderCellBoundingBox(BufferBuilder buffer, Matrix4f matrix, FlowFieldCell cell, float r, float g, float b) {
+        int resolution = FlowFieldCell.RESOLUTION;
+        float minX = cell.x() * resolution;
+        float minY = cell.y() * resolution;
+        float minZ = cell.z() * resolution;
+        float maxX = minX + resolution;
+        float maxY = minY + resolution;
+        float maxZ = minZ + resolution;
+
+        // Bottom face edges
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        // Top face edges
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        // Vertical edges
+        buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+
+        buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
+        buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, LINE_ALPHA).endVertex();
     }
 }

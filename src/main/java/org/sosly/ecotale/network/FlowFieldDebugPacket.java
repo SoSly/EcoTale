@@ -61,6 +61,16 @@ public class FlowFieldDebugPacket {
             writeCell(buf, entry.getKey());
             writeVec3(buf, entry.getValue());
         }
+
+        Map<FlowFieldCell, BlockPos> hubs = new HashMap<>();
+        for (FlowFieldCell cell : outward.keySet()) {
+            solution.getHubPosition(cell).ifPresent(hub -> hubs.put(cell, hub));
+        }
+        buf.writeVarInt(hubs.size());
+        for (Map.Entry<FlowFieldCell, BlockPos> entry : hubs.entrySet()) {
+            writeCell(buf, entry.getKey());
+            buf.writeBlockPos(entry.getValue());
+        }
     }
 
     public static FlowFieldDebugPacket decode(FriendlyByteBuf buf) {
@@ -94,9 +104,17 @@ public class FlowFieldDebugPacket {
             inward.put(cell, vec);
         }
 
+        Map<FlowFieldCell, BlockPos> hubs = new HashMap<>();
+        int hubCount = buf.readVarInt();
+        for (int i = 0; i < hubCount; i++) {
+            FlowFieldCell cell = readCell(buf);
+            BlockPos hub = buf.readBlockPos();
+            hubs.put(cell, hub);
+        }
+
         FlowFieldCell startCell = FlowFieldCell.fromBlockPos(roostPos);
         FlowFieldSolution solution = FlowFieldSolution.create(
-            outward, inward, Map.of(), exitPoint, roostPos, startCell
+            outward, inward, hubs, exitPoint, roostPos, startCell
         );
 
         return new FlowFieldDebugPacket(roostPos, false, solution);

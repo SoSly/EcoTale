@@ -77,8 +77,12 @@ public class FlowFieldGenerator {
         }
 
         Set<FlowFieldCell> pathCells = tracePathToExit(exitCell);
-        Map<FlowFieldCell, Vec3> inwardField = buildInwardField(pathCells);
-        extendInwardFieldOutside(inwardField, exitCell, exitPoint);
+        if (!validatePathConnectivity(exitCell)) {
+            return FlowFieldSolution.failed(roostPos);
+        }
+
+        Map<FlowFieldCell, Vec3> inwardField = buildInwardField(pathCells, exitPoint);
+        BlockPos elevatedExit = extendInwardFieldOutside(inwardField, exitCell, exitPoint);
         Map<FlowFieldCell, Vec3> outwardField = buildOutwardField(inwardField);
 
         if (aborted) {
@@ -93,7 +97,8 @@ public class FlowFieldGenerator {
             }
         }
 
-        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, exitPoint, roostPos, actualStartCell);
+        BlockPos finalExit = elevatedExit != null ? elevatedExit : exitPoint;
+        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, finalExit, roostPos, actualStartCell);
     }
 
     private boolean checkTimeout() {
@@ -119,6 +124,42 @@ public class FlowFieldGenerator {
         }
 
         return pathCells;
+    }
+
+    private boolean validatePathConnectivity(FlowFieldCell exitCell) {
+        Vec3 current = Vec3.atCenterOf(roostPos.below());
+
+        FlowFieldCell cell = actualStartCell;
+        while (cell != null) {
+            BlockPos hub = hubCache.get(cell);
+            if (hub == null) {
+                return false;
+            }
+
+            Vec3 hubVec = Vec3.atCenterOf(hub);
+            if (!raycastClear(current, hubVec)) {
+                return false;
+            }
+
+            current = hubVec;
+            cell = getNextCellOnPath(cell, exitCell);
+        }
+
+        return true;
+    }
+
+    private FlowFieldCell getNextCellOnPath(FlowFieldCell current, FlowFieldCell exitCell) {
+        if (current.equals(exitCell)) {
+            return null;
+        }
+
+        for (Map.Entry<FlowFieldCell, FlowFieldCell> entry : cameFrom.entrySet()) {
+            if (entry.getValue().equals(current)) {
+                return entry.getKey();
+            }
+        }
+
+        return null;
     }
 
     private FlowFieldCell findReachableStartCell() {
@@ -197,6 +238,11 @@ public class FlowFieldGenerator {
     private List<FlowFieldCell> getPassableNeighbors(FlowFieldCell cell) {
         List<FlowFieldCell> neighbors = new ArrayList<>();
 
+        BlockPos cellHub = hubCache.get(cell);
+        if (cellHub == null) {
+            return neighbors;
+        }
+
         for (Direction direction : Direction.values()) {
             FlowFieldCell neighbor = new FlowFieldCell(
                 cell.x() + direction.getStepX(),
@@ -205,15 +251,16 @@ public class FlowFieldGenerator {
             );
 
             BlockPos neighborHub = hubCache.get(neighbor);
-            if (neighborHub == null) {
-                neighborHub = findHub(neighbor);
-                if (neighborHub == null) {
-                    continue;
+            if (neighborHub != null) {
+                if (tryBoundaryCrossing(cell, neighbor, direction, cellHub, neighborHub)) {
+                    neighbors.add(neighbor);
                 }
-                hubCache.put(neighbor, neighborHub);
+                continue;
             }
 
-            if (tryBoundaryCrossing(cell, neighbor, direction, neighborHub)) {
+            BlockPos foundHub = findHubReachableFrom(neighbor, direction.getOpposite(), cellHub);
+            if (foundHub != null) {
+                hubCache.put(neighbor, foundHub);
                 neighbors.add(neighbor);
             }
         }
@@ -246,13 +293,73 @@ public class FlowFieldGenerator {
         return null;
     }
 
-    private boolean tryBoundaryCrossing(FlowFieldCell from, FlowFieldCell to, Direction direction, BlockPos toHub) {
+    private BlockPos findHubReachableFrom(FlowFieldCell cell, Direction entryDirection, BlockPos sourceHub) {
+        BlockPos boundaryStart = getBoundaryStart(cell, entryDirection);
+        int resolution = FlowFieldCell.RESOLUTION;
+
+        for (int u = 0; u < resolution; u++) {
+            for (int v = 0; v < resolution; v++) {
+                BlockPos boundaryPos = getPositionOnBoundary(boundaryStart, entryDirection, u, v);
+                if (!isAir(boundaryPos)) {
+                    continue;
+                }
+
+                BlockPos otherSide = boundaryPos.relative(entryDirection.getOpposite());
+                if (!isAir(otherSide)) {
+                    continue;
+                }
+
+                if (!raycastClear(Vec3.atCenterOf(sourceHub), Vec3.atCenterOf(otherSide))) {
+                    continue;
+                }
+
+                BlockPos hub = findHubReachableFromEntry(cell, boundaryPos);
+                if (hub != null) {
+                    return hub;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private BlockPos findHubReachableFromEntry(FlowFieldCell cell, BlockPos entryPoint) {
+        BlockPos center = cell.centerBlockPos();
+        if (isAir(center) && raycastClear(Vec3.atCenterOf(entryPoint), Vec3.atCenterOf(center))) {
+            return center;
+        }
+
+        for (int radius = 1; radius <= HUB_SEARCH_RADIUS; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        if (Math.abs(dx) != radius && Math.abs(dy) != radius && Math.abs(dz) != radius) {
+                            continue;
+                        }
+                        BlockPos candidate = center.offset(dx, dy, dz);
+                        if (isWithinCell(candidate, cell) && isAir(candidate)
+                                && raycastClear(Vec3.atCenterOf(entryPoint), Vec3.atCenterOf(candidate))) {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isWithinCell(entryPoint, cell) && isAir(entryPoint)) {
+            return entryPoint;
+        }
+
+        return null;
+    }
+
+    private boolean tryBoundaryCrossing(FlowFieldCell from, FlowFieldCell to, Direction direction, BlockPos fromHub, BlockPos toHub) {
         BlockPos boundaryStart = getBoundaryStart(from, direction);
         int resolution = FlowFieldCell.RESOLUTION;
 
         BlockPos[] samples = getSamplePositions(boundaryStart, direction, resolution);
         for (BlockPos sample : samples) {
-            if (checkCrossing(sample, direction, toHub)) {
+            if (checkCrossing(sample, direction, fromHub, toHub)) {
                 return true;
             }
         }
@@ -260,7 +367,7 @@ public class FlowFieldGenerator {
         for (int u = 0; u < resolution; u++) {
             for (int v = 0; v < resolution; v++) {
                 BlockPos pos = getPositionOnBoundary(boundaryStart, direction, u, v);
-                if (checkCrossing(pos, direction, toHub)) {
+                if (checkCrossing(pos, direction, fromHub, toHub)) {
                     return true;
                 }
             }
@@ -310,7 +417,7 @@ public class FlowFieldGenerator {
         };
     }
 
-    private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos toHub) {
+    private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos fromHub, BlockPos toHub) {
         if (!isAir(boundaryPos)) {
             return false;
         }
@@ -320,10 +427,19 @@ public class FlowFieldGenerator {
             return false;
         }
 
+        if (!raycastClear(Vec3.atCenterOf(fromHub), Vec3.atCenterOf(boundaryPos))) {
+            return false;
+        }
+
         return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub));
     }
 
     private boolean isExit(FlowFieldCell cell) {
+        BlockPos hub = hubCache.get(cell);
+        if (hub == null) {
+            return false;
+        }
+
         int resolution = FlowFieldCell.RESOLUTION;
         int baseX = cell.x() * resolution;
         int baseY = cell.y() * resolution;
@@ -333,7 +449,7 @@ public class FlowFieldGenerator {
             for (int dy = 0; dy < resolution; dy++) {
                 for (int dz = 0; dz < resolution; dz++) {
                     BlockPos pos = new BlockPos(baseX + dx, baseY + dy, baseZ + dz);
-                    if (isAir(pos) && hasSkyAccess(pos)) {
+                    if (isAir(pos) && hasSkyAccess(pos) && raycastClear(Vec3.atCenterOf(hub), Vec3.atCenterOf(pos))) {
                         return true;
                     }
                 }
@@ -344,53 +460,46 @@ public class FlowFieldGenerator {
     }
 
     private BlockPos findPreciseExitPoint(FlowFieldCell exitCell) {
-        FlowFieldCell previousCell = cameFrom.get(exitCell);
-        if (previousCell == null) {
-            return findAnySkyAccessBlock(exitCell);
+        BlockPos hub = hubCache.get(exitCell);
+        if (hub == null) {
+            return null;
         }
 
-        Direction entryDirection = getDirectionBetweenCells(previousCell, exitCell);
-        BlockPos boundaryStart = getBoundaryStart(previousCell, entryDirection);
         int resolution = FlowFieldCell.RESOLUTION;
+        int baseX = exitCell.x() * resolution;
+        int baseY = exitCell.y() * resolution;
+        int baseZ = exitCell.z() * resolution;
 
         BlockPos bestCandidate = null;
-        for (int u = 0; u < resolution; u++) {
-            for (int v = 0; v < resolution; v++) {
-                BlockPos pos = getPositionOnBoundary(boundaryStart, entryDirection, u, v);
-                BlockPos inExitCell = pos.relative(entryDirection);
-                if (isAir(inExitCell) && hasSkyAccess(inExitCell)) {
-                    if (bestCandidate == null) {
-                        bestCandidate = inExitCell;
-                    }
-                }
-            }
-        }
-
-        if (bestCandidate == null) {
-            return findAnySkyAccessBlock(exitCell);
-        }
-
-        return bestCandidate.above(EXIT_CLEARANCE);
-    }
-
-    private BlockPos findAnySkyAccessBlock(FlowFieldCell cell) {
-        int resolution = FlowFieldCell.RESOLUTION;
-        int baseX = cell.x() * resolution;
-        int baseY = cell.y() * resolution;
-        int baseZ = cell.z() * resolution;
-
         for (int dx = 0; dx < resolution; dx++) {
             for (int dy = 0; dy < resolution; dy++) {
                 for (int dz = 0; dz < resolution; dz++) {
                     BlockPos pos = new BlockPos(baseX + dx, baseY + dy, baseZ + dz);
-                    if (isAir(pos) && hasSkyAccess(pos)) {
-                        return pos.above(EXIT_CLEARANCE);
+                    if (isAir(pos) && hasSkyAccess(pos) && raycastClear(Vec3.atCenterOf(hub), Vec3.atCenterOf(pos))) {
+                        if (bestCandidate == null || pos.getY() > bestCandidate.getY()) {
+                            bestCandidate = pos;
+                        }
                     }
                 }
             }
         }
 
-        return null;
+        return elevateExitPoint(bestCandidate);
+    }
+
+    private BlockPos elevateExitPoint(BlockPos baseExit) {
+        BlockPos best = baseExit;
+        for (int i = 1; i <= EXIT_CLEARANCE; i++) {
+            BlockPos candidate = baseExit.above(i);
+            if (!isAir(candidate)) {
+                break;
+            }
+            if (!hasSkyAccess(candidate)) {
+                break;
+            }
+            best = candidate;
+        }
+        return best;
     }
 
     private Direction getDirectionBetweenCells(FlowFieldCell from, FlowFieldCell to) {
@@ -416,12 +525,16 @@ public class FlowFieldGenerator {
         return Direction.NORTH;
     }
 
-    private Map<FlowFieldCell, Vec3> buildInwardField(Set<FlowFieldCell> pathCells) {
+    private Map<FlowFieldCell, Vec3> buildInwardField(Set<FlowFieldCell> pathCells, BlockPos exitPoint) {
         Map<FlowFieldCell, Vec3> inwardField = new HashMap<>();
 
         for (FlowFieldCell cell : pathCells) {
             FlowFieldCell parent = cameFrom.get(cell);
             if (parent == null) {
+                if (pathCells.size() == 1) {
+                    Vec3 toRoost = Vec3.atCenterOf(roostPos).subtract(Vec3.atCenterOf(exitPoint)).normalize();
+                    inwardField.put(cell, toRoost);
+                }
                 continue;
             }
             Vec3 direction = vectorBetweenCells(cell, parent).normalize();
@@ -431,30 +544,58 @@ public class FlowFieldGenerator {
         return inwardField;
     }
 
-    private void extendInwardFieldOutside(Map<FlowFieldCell, Vec3> inwardField, FlowFieldCell exitCell, BlockPos exitPoint) {
-        FlowFieldCell previousCell = cameFrom.get(exitCell);
-        if (previousCell == null) {
-            return;
+    private BlockPos extendInwardFieldOutside(Map<FlowFieldCell, Vec3> inwardField, FlowFieldCell exitCell, BlockPos exitPoint) {
+        BlockPos exitHub = hubCache.get(exitCell);
+        if (exitHub == null) {
+            return null;
         }
 
-        Vec3 exitDirection = vectorBetweenCells(previousCell, exitCell).normalize().scale(-1);
         FlowFieldCell exitPointCell = FlowFieldCell.fromBlockPos(exitPoint);
+        if (!exitPointCell.equals(exitCell)) {
+            Vec3 towardExitCell = vectorBetweenCells(exitPointCell, exitCell).normalize();
+            inwardField.put(exitPointCell, towardExitCell);
+            hubCache.put(exitPointCell, exitPoint);
+        }
 
-        for (int i = 1; i <= EXTENSION_CELLS; i++) {
+        FlowFieldCell previousCell = exitPointCell.equals(exitCell) ? exitCell : exitPointCell;
+        FlowFieldCell firstExtension = new FlowFieldCell(previousCell.x(), previousCell.y() + 1, previousCell.z());
+
+        if (!cellHasSkyAccess(firstExtension)) {
+            return null;
+        }
+
+        Vec3 towardPrevious = vectorBetweenCells(firstExtension, previousCell).normalize();
+        inwardField.put(firstExtension, towardPrevious);
+        BlockPos firstExtensionHub = firstExtension.centerBlockPos();
+        hubCache.put(firstExtension, firstExtensionHub);
+
+        Vec3 hubVec = Vec3.atCenterOf(exitHub);
+        Vec3 exitVec = Vec3.atCenterOf(exitPoint);
+        Vec3 outwardDirection = exitVec.subtract(hubVec).normalize();
+
+        FlowFieldCell lastCell = firstExtension;
+        for (int i = 1; i < EXTENSION_CELLS; i++) {
             FlowFieldCell extensionCell = new FlowFieldCell(
-                exitPointCell.x() + (int) Math.round(exitDirection.x * -i),
-                exitPointCell.y() + (int) Math.round(exitDirection.y * -i),
-                exitPointCell.z() + (int) Math.round(exitDirection.z * -i)
+                firstExtension.x() + (int) Math.round(outwardDirection.x * i),
+                firstExtension.y() + (int) Math.round(outwardDirection.y * i),
+                firstExtension.z() + (int) Math.round(outwardDirection.z * i)
             );
+
+            if (extensionCell.equals(lastCell)) {
+                continue;
+            }
 
             if (!cellHasSkyAccess(extensionCell)) {
                 break;
             }
 
-            Vec3 towardExit = vectorBetweenCells(extensionCell, exitPointCell).normalize();
-            inwardField.put(extensionCell, towardExit);
+            Vec3 towardLast = vectorBetweenCells(extensionCell, lastCell).normalize();
+            inwardField.put(extensionCell, towardLast);
             hubCache.put(extensionCell, extensionCell.centerBlockPos());
+            lastCell = extensionCell;
         }
+
+        return firstExtensionHub;
     }
 
     private boolean cellHasSkyAccess(FlowFieldCell cell) {

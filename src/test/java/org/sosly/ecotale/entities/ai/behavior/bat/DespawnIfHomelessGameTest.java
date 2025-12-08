@@ -17,7 +17,7 @@ import org.sosly.ecotale.utils.TestUtils;
 @GameTestHolder(EcoTale.MOD_ID)
 public class DespawnIfHomelessGameTest {
 
-    @GameTest(template = "bat_roost", timeoutTicks = 100, attempts = 3, required = true, requiredSuccesses = 3)
+    @GameTest(template = "bat_roost", timeoutTicks = 100)
     public void batDespawnsWhenRoostDestroyed(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
 

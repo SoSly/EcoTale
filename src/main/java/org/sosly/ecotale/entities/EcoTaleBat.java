@@ -33,6 +33,8 @@ import org.sosly.ecotale.entities.ai.SensorTypes;
 import org.sosly.ecotale.entities.ai.behavior.bat.DespawnIfHomeless;
 import org.sosly.ecotale.entities.ai.behavior.bat.DropGuano;
 import org.sosly.ecotale.entities.ai.behavior.bat.RestAtRoost;
+import org.sosly.ecotale.entities.ai.behavior.bat.ReturnToRoost;
+import org.sosly.ecotale.entities.ai.behavior.bat.WakeIfRoostDistant;
 
 public class EcoTaleBat extends Bat {
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
@@ -87,8 +89,10 @@ public class EcoTaleBat extends Bat {
         ));
 
         brain.addActivity(Activities.ROOST.get(), ImmutableList.of(
-                Pair.of(0, new RestAtRoost()),
-                Pair.of(1, new DropGuano())
+                Pair.of(0, new WakeIfRoostDistant()),
+                Pair.of(1, new RestAtRoost()),
+                Pair.of(2, new DropGuano()),
+                Pair.of(3, new ReturnToRoost())
         ));
 
         brain.addActivity(Activities.FORAGE.get(), ImmutableList.of());
