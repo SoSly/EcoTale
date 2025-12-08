@@ -1,5 +1,6 @@
 package org.sosly.ecotale.blocks;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
@@ -9,15 +10,25 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.slf4j.Logger;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.EntityRegistry;
 import org.sosly.ecotale.navigation.FlowFieldManager;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 
 public class RoostBlockEntity extends BlockEntity {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String TAG_FLOW_FIELD = "flowField";
+    private static final String TAG_FAILURE_COUNT = "failureCount";
+    private static final String TAG_NEXT_RETRY_TICK = "nextRetryTick";
+    private static final int VALIDATION_INTERVAL = 500;
+    private static final int BASE_RETRY_DELAY = 500;
+    private static final int MAX_RETRY_DELAY = 6000;
 
     private FlowFieldSolution flowFieldSolution;
+    private int validationTicker = VALIDATION_INTERVAL;
+    private int failureCount;
+    private long nextRetryTick;
 
     public RoostBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityRegistry.ROOST.get(), pos, state);
@@ -41,6 +52,10 @@ public class RoostBlockEntity extends BlockEntity {
         if (flowFieldSolution != null) {
             tag.put(TAG_FLOW_FIELD, flowFieldSolution.save());
         }
+        if (failureCount > 0) {
+            tag.putInt(TAG_FAILURE_COUNT, failureCount);
+            tag.putLong(TAG_NEXT_RETRY_TICK, nextRetryTick);
+        }
     }
 
     @Override
@@ -49,6 +64,8 @@ public class RoostBlockEntity extends BlockEntity {
         if (tag.contains(TAG_FLOW_FIELD)) {
             flowFieldSolution = FlowFieldSolution.load(tag.getCompound(TAG_FLOW_FIELD));
         }
+        failureCount = tag.getInt(TAG_FAILURE_COUNT);
+        nextRetryTick = tag.getLong(TAG_NEXT_RETRY_TICK);
     }
 
     public FlowFieldSolution getFlowFieldSolution() {
@@ -57,7 +74,70 @@ public class RoostBlockEntity extends BlockEntity {
 
     public void setFlowFieldSolution(FlowFieldSolution solution) {
         this.flowFieldSolution = solution;
+        if (solution != null && !solution.isFailed()) {
+            failureCount = 0;
+            nextRetryTick = 0;
+        }
         setChanged();
+    }
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, RoostBlockEntity roost) {
+        roost.validationTicker--;
+        if (roost.validationTicker <= 0) {
+            roost.validationTicker = VALIDATION_INTERVAL;
+            roost.validateAndRegenerate();
+        }
+    }
+
+    private void validateAndRegenerate() {
+        Level level = getLevel();
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+
+        if (flowFieldSolution == null) {
+            if (gameTime >= nextRetryTick) {
+                requestGenerationWithBackoff();
+            }
+            return;
+        }
+
+        if (flowFieldSolution.isFailed()) {
+            if (gameTime >= nextRetryTick) {
+                requestGenerationWithBackoff();
+            }
+            return;
+        }
+
+        long startTime = System.nanoTime();
+        boolean valid = flowFieldSolution.isValid(level);
+        long elapsed = System.nanoTime() - startTime;
+
+        LOGGER.debug("FlowField validation at {}: {}ms, valid={}",
+                getBlockPos(), elapsed / 1_000_000.0, valid);
+
+        if (!valid) {
+            requestGenerationWithBackoff();
+        }
+    }
+
+    private void requestGenerationWithBackoff() {
+        FlowFieldManager.getInstance().requestGeneration(this);
+
+        if (flowFieldSolution == null || flowFieldSolution.isFailed()) {
+            failureCount++;
+            int delay = Math.min(BASE_RETRY_DELAY * (1 << (failureCount - 1)), MAX_RETRY_DELAY);
+            nextRetryTick = getLevel().getGameTime() + delay;
+            setChanged();
+        }
+    }
+
+    public void forceRevalidate() {
+        failureCount = 0;
+        nextRetryTick = 0;
+        validateAndRegenerate();
     }
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {

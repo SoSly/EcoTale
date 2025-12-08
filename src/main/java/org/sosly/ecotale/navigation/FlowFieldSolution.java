@@ -1,15 +1,21 @@
 package org.sosly.ecotale.navigation;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -108,10 +114,190 @@ public class FlowFieldSolution {
 
     /**
      * Validates that the flow field is still navigable.
-     * This is currently a stub.
+     * Checks exit accessibility and traces path from exit back to roost using inward field.
      */
     public boolean isValid(Level level) {
+        if (failed || exitPoint == null) {
+            return false;
+        }
+
+        if (!level.canSeeSky(exitPoint) || !level.getBlockState(exitPoint).isAir()) {
+            return false;
+        }
+
+        FlowFieldCell roostCell = FlowFieldCell.fromBlockPos(roostPos);
+
+        FlowFieldCell startCell = findStartCellForValidation();
+        if (startCell == null) {
+            return false;
+        }
+
+        if (isNearRoost(startCell, roostCell)) {
+            return true;
+        }
+
+        return tracePathToRoost(startCell, roostCell, level);
+    }
+
+    private FlowFieldCell findStartCellForValidation() {
+        FlowFieldCell exitPointCell = FlowFieldCell.fromBlockPos(exitPoint);
+        if (inwardField.containsKey(exitPointCell)) {
+            return exitPointCell;
+        }
+
+        for (FlowFieldCell cell : inwardField.keySet()) {
+            int dx = Math.abs(cell.x() - exitPointCell.x());
+            int dy = Math.abs(cell.y() - exitPointCell.y());
+            int dz = Math.abs(cell.z() - exitPointCell.z());
+            if (dx <= 1 && dy <= 1 && dz <= 1) {
+                return cell;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean tracePathToRoost(FlowFieldCell startCell, FlowFieldCell roostCell, Level level) {
+        FlowFieldCell current = startCell;
+        Set<FlowFieldCell> visited = new HashSet<>();
+
+        while (!isNearRoost(current, roostCell)) {
+            if (visited.contains(current)) {
+                return false;
+            }
+            visited.add(current);
+
+            Vec3 direction = inwardField.get(current);
+            if (direction == null) {
+                return false;
+            }
+
+            FlowFieldCell next = FlowFieldCell.cellInDirection(current, direction);
+            if (!isStepPassable(current, next, level)) {
+                return false;
+            }
+
+            current = next;
+        }
+
         return true;
+    }
+
+    private boolean isNearRoost(FlowFieldCell current, FlowFieldCell roostCell) {
+        int dx = Math.abs(current.x() - roostCell.x());
+        int dy = Math.abs(current.y() - roostCell.y());
+        int dz = Math.abs(current.z() - roostCell.z());
+        return dx <= 1 && dy <= 1 && dz <= 1;
+    }
+
+    private boolean isStepPassable(FlowFieldCell from, FlowFieldCell to, Level level) {
+        BlockPos fromHub = hubCache.get(from);
+        BlockPos toHub = hubCache.get(to);
+
+        if (fromHub == null || toHub == null) {
+            return false;
+        }
+
+        if (!level.getBlockState(fromHub).isAir() || !level.getBlockState(toHub).isAir()) {
+            return false;
+        }
+
+        Direction direction = getDirectionBetweenCells(from, to);
+        if (direction == null) {
+            return false;
+        }
+
+        return hasBoundaryCrossing(from, direction, toHub, level);
+    }
+
+    private Direction getDirectionBetweenCells(FlowFieldCell from, FlowFieldCell to) {
+        int dx = to.x() - from.x();
+        int dy = to.y() - from.y();
+        int dz = to.z() - from.z();
+
+        if (dx == 1) {
+            return Direction.EAST;
+        }
+        if (dx == -1) {
+            return Direction.WEST;
+        }
+        if (dy == 1) {
+            return Direction.UP;
+        }
+        if (dy == -1) {
+            return Direction.DOWN;
+        }
+        if (dz == 1) {
+            return Direction.SOUTH;
+        }
+        if (dz == -1) {
+            return Direction.NORTH;
+        }
+        return null;
+    }
+
+    private boolean hasBoundaryCrossing(FlowFieldCell from, Direction direction, BlockPos toHub, Level level) {
+        int resolution = FlowFieldCell.RESOLUTION;
+        BlockPos boundaryStart = getBoundaryStart(from, direction);
+
+        BlockPos center = getPositionOnBoundary(boundaryStart, direction, resolution / 2, resolution / 2);
+        if (checkCrossing(center, direction, toHub, level)) {
+            return true;
+        }
+
+        for (int u = 0; u < resolution; u++) {
+            for (int v = 0; v < resolution; v++) {
+                BlockPos pos = getPositionOnBoundary(boundaryStart, direction, u, v);
+                if (checkCrossing(pos, direction, toHub, level)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private BlockPos getBoundaryStart(FlowFieldCell cell, Direction direction) {
+        int resolution = FlowFieldCell.RESOLUTION;
+        int baseX = cell.x() * resolution;
+        int baseY = cell.y() * resolution;
+        int baseZ = cell.z() * resolution;
+
+        return switch (direction) {
+            case EAST -> new BlockPos(baseX + resolution - 1, baseY, baseZ);
+            case WEST -> new BlockPos(baseX, baseY, baseZ);
+            case UP -> new BlockPos(baseX, baseY + resolution - 1, baseZ);
+            case DOWN -> new BlockPos(baseX, baseY, baseZ);
+            case SOUTH -> new BlockPos(baseX, baseY, baseZ + resolution - 1);
+            case NORTH -> new BlockPos(baseX, baseY, baseZ);
+        };
+    }
+
+    private BlockPos getPositionOnBoundary(BlockPos start, Direction direction, int u, int v) {
+        return switch (direction.getAxis()) {
+            case X -> start.offset(0, u, v);
+            case Y -> start.offset(u, 0, v);
+            case Z -> start.offset(u, v, 0);
+        };
+    }
+
+    private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos toHub, Level level) {
+        if (!level.getBlockState(boundaryPos).isAir()) {
+            return false;
+        }
+
+        BlockPos otherSide = boundaryPos.relative(direction);
+        if (!level.getBlockState(otherSide).isAir()) {
+            return false;
+        }
+
+        return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub), level);
+    }
+
+    private boolean raycastClear(Vec3 from, Vec3 to, Level level) {
+        ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
+        BlockHitResult result = level.clip(context);
+        return result.getType() == HitResult.Type.MISS;
     }
 
     public void forEachOutwardCell(BiConsumer<FlowFieldCell, Vec3> consumer) {

@@ -1,6 +1,7 @@
 package org.sosly.ecotale.navigation;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Represents a coarse grid cell for flow field navigation.
@@ -15,6 +16,21 @@ public record FlowFieldCell(int x, int y, int z) {
             Math.floorDiv(pos.getY(), RESOLUTION),
             Math.floorDiv(pos.getZ(), RESOLUTION)
         );
+    }
+
+    public static FlowFieldCell cellInDirection(FlowFieldCell cell, Vec3 direction) {
+        double absX = Math.abs(direction.x);
+        double absY = Math.abs(direction.y);
+        double absZ = Math.abs(direction.z);
+        double maxComponent = Math.max(absX, Math.max(absY, absZ));
+
+        if (absX == maxComponent) {
+            return new FlowFieldCell(cell.x() + (direction.x > 0 ? 1 : -1), cell.y(), cell.z());
+        }
+        if (absY == maxComponent) {
+            return new FlowFieldCell(cell.x(), cell.y() + (direction.y > 0 ? 1 : -1), cell.z());
+        }
+        return new FlowFieldCell(cell.x(), cell.y(), cell.z() + (direction.z > 0 ? 1 : -1));
     }
 
     public BlockPos centerBlockPos() {

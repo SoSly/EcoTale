@@ -57,19 +57,21 @@ These decisions were made during planning and supersede any conflicting details 
 **FlowFieldCell:**
 ```java
 public record FlowFieldCell(int x, int y, int z) {
+    public static final int RESOLUTION = 8;
+
     public static FlowFieldCell fromBlockPos(BlockPos pos) {
         return new FlowFieldCell(
-                Math.floorDiv(pos.getX(), CELL_SIZE),
-                Math.floorDiv(pos.getY(), CELL_SIZE),
-                Math.floorDiv(pos.getZ(), CELL_SIZE)
+                Math.floorDiv(pos.getX(), RESOLUTION),
+                Math.floorDiv(pos.getY(), RESOLUTION),
+                Math.floorDiv(pos.getZ(), RESOLUTION)
         );
     }
 
     public BlockPos centerBlockPos() {
         return new BlockPos(
-                x * CELL_SIZE + CELL_SIZE / 2,
-                y * CELL_SIZE + CELL_SIZE / 2,
-                z * CELL_SIZE + CELL_SIZE / 2
+                x * RESOLUTION + RESOLUTION / 2,
+                y * RESOLUTION + RESOLUTION / 2,
+                z * RESOLUTION + RESOLUTION / 2
         );
     }
 }
@@ -81,11 +83,17 @@ public record FlowFieldCell(int x, int y, int z) {
 - `Map<FlowFieldCell, BlockPos> hubCache` - cached hub positions for passability checks during validation
 - `BlockPos exitPoint` - precise exit coordinates (single exit for now)
 - `BlockPos roostPos` - the roost this solution belongs to
-- `boolean isValid()` - path re-trace validation
+- `boolean isFailed()` - check if generation failed
+- `boolean isValid(Level)` - path re-trace validation (stub implementation, returns true)
 - `static FlowFieldSolution failed(BlockPos roostPos)` - factory for failed generation
+- `static FlowFieldSolution create(...)` - factory for successful generation
+- `CompoundTag save()` / `static FlowFieldSolution load(CompoundTag)` - NBT serialization
+- `forEachOutwardCell()` / `forEachInwardCell()` - iteration helpers for debug rendering
+- `getOutwardCellCount()` / `getInwardCellCount()` - for debug logging
 
 **FlowFieldManager:**
-- Stub class with `requestGeneration(RoostBlockEntity roost)` method
+- Singleton with `getInstance()` accessor
+- `requestGeneration(RoostBlockEntity roost)` runs synchronously and logs timing/cell counts
 - Will become the threaded queue manager in Phase 5
 
 **Validation:** Code compiles.
@@ -94,34 +102,42 @@ public record FlowFieldCell(int x, int y, int z) {
 
 ### Phase 2: Debug Visualization
 
-**Goal:** Render flow field data as particles.
+**Goal:** Render flow field data visually for debugging.
 
 **Files:**
-- `src/main/java/org/sosly/ecotale/commands/DebugCommands.java`
-- `src/main/java/org/sosly/ecotale/navigation/FlowFieldDebugRenderer.java`
+- `src/main/java/org/sosly/ecotale/commands/FlowFieldCommands.java`
+- `src/main/java/org/sosly/ecotale/client/FlowFieldDebugRenderer.java`
+- `src/main/java/org/sosly/ecotale/network/FlowFieldDebugPacket.java`
 
 **Commands:**
 
-All flow field commands live under `/ecotale flowfield`:
+All flow field commands live under `/ecotale flowfield` (with `/ecotale ff` as a shorthand alias):
 
 ```
 /ecotale flowfield visualize 100 64 -200
-/ecotale flowfield visualize ~ ~-5 ~
+/ecotale ff visualize ~ ~-5 ~
+/ecotale flowfield clear
 /ecotale flowfield revalidate 100 64 -200
 ```
 
 **`/ecotale flowfield visualize <pos>`**
 
-Renders the flow field as particles.
+Toggles persistent flow field visualization using debug lines.
 
 1. Look up the block at the specified position
 2. If it's not a roost block, error: "No roost at that position"
-3. If roost has no FlowFieldSolution, error: "No flow field generated for this roost"
-4. Otherwise, render the flow field:
-   - Outward field: orange/yellow particles along direction vectors
-   - Inward field: blue particles along direction vectors
-   - Exit point: green particles in a vertical column
-5. Particles spawn once per command invocation (not continuous)
+3. If roost has no FlowFieldSolution or it failed, error: "No flow field generated for this roost"
+4. Send a `FlowFieldDebugPacket` to the player's client
+5. Client toggles visualization on/off for that roost position
+6. When enabled, renders:
+   - Outward field: orange arrows along direction vectors (offset slightly for visibility)
+   - Inward field: blue arrows along direction vectors (offset opposite direction)
+   - Exit point: green vertical column
+7. Visualization persists until toggled off or cleared
+
+**`/ecotale flowfield clear`**
+
+Clears all active flow field visualizations for the player.
 
 **`/ecotale flowfield revalidate <pos>`**
 
@@ -133,7 +149,13 @@ Forces immediate revalidation, bypassing the 500-tick interval. Useful for testi
 4. Report result: "Flow field valid" or "Flow field invalid, regeneration queued"
 5. Reset failure backoff to allow immediate retry if regeneration is needed
 
-**Validation:** Both commands exist and report appropriate errors for missing roosts or flow fields.
+**Implementation Notes:**
+- Debug rendering uses `DEBUG_LINES` vertex format with depth testing disabled for visibility through terrain
+- Arrows are rendered with 4-prong arrowheads for 3D clarity
+- Outward and inward arrows are offset perpendicular to their direction so both are visible in the same cell
+- The offset direction is deterministic per cell (based on position hash) so it's consistent across frames
+
+**Validation:** All three commands exist and report appropriate errors for missing roosts or flow fields.
 
 ---
 
@@ -150,55 +172,91 @@ The flood fill starts at the roost and expands outward using BFS. This means `ca
 
 BFS is the right choice here: all cell transitions have equal cost (unweighted graph), so a simple FIFO queue naturally produces shortest paths by cell count. A priority queue would add complexity without benefit.
 
+**Key Implementation Decision:** The solution stores only cells on the actual path from roost to exit, not all visited cells. After finding the exit, we trace back through `cameFrom` to build a `pathCells` set, then only include those cells in the inward/outward fields. This significantly reduces memory for large caves where BFS explores many dead ends.
+
 ```
-generateFlowFields(roostPos, level):
+generate():
+    actualStart = findReachableStartCell()  // see below
+    if actualStart is null:
+        return FlowFieldSolution.failed(roostPos)
+
+    exitCell = runFloodFill(actualStart)
+    if exitCell is null:
+        return FlowFieldSolution.failed(roostPos)
+
+    exitPoint = findPreciseExitPoint(exitCell)
+    if exitPoint is null:
+        return FlowFieldSolution.failed(roostPos)
+
+    // Trace back from exit to roost to get only path cells
+    pathCells = tracePathToExit(exitCell)
+
+    // Build fields using only path cells
+    inwardField = buildInwardField(pathCells)
+    extendInwardFieldOutside(inwardField, exitCell, exitPoint)
+    outwardField = buildOutwardField(inwardField)
+
+    // Only include hub cache entries for cells in the solution
+    pathHubCache = filter hubCache to pathCells
+
+    return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, exitPoint, roostPos)
+
+runFloodFill(startCell):
     frontier = Queue (FIFO)
     visited = Set<FlowFieldCell>
-    cameFrom = Map<FlowFieldCell, FlowFieldCell>
-    hubCache = Map<FlowFieldCell, BlockPos>
-    exitPoint = null
 
-    startCell = FlowFieldCell.fromBlockPos(roostPos)
     frontier.add(startCell)
     visited.add(startCell)
-    hubCache.put(startCell, findHub(startCell, level))
 
     while frontier is not empty:
         current = frontier.poll()
 
-        if isExit(current, level):
-            exitPoint = findPreciseExitPoint(current, level, cameFrom)
-            break  // stop at first exit (early termination)
+        if isExit(current):
+            return current  // early termination
 
-        if distanceFromRoost(current) > MAX_RADIUS:
+        if distanceFromStart(current) > MAX_RADIUS_CELLS:
             continue  // bound the search
 
-        for neighbor in getPassableNeighbors(current, level, hubCache):
+        for neighbor in getPassableNeighbors(current):
             if neighbor not in visited:
-                visited.add(neighbor)  // mark visited when adding, not when polling
+                visited.add(neighbor)
                 frontier.add(neighbor)
                 cameFrom.put(neighbor, current)
 
-    if exitPoint is null:
-        return FlowFieldSolution.failed(roostPos)
+    return null  // no exit found
 
-    // Build INWARD field first - cameFrom naturally points toward roost
-    inwardField = Map<FlowFieldCell, Vec3>
-    for cell in visited:
-        if cell in cameFrom:
-            // Vector from this cell toward the cell we came from (toward roost)
-            direction = vectorFrom(cell, cameFrom.get(cell)).normalize()
-            inwardField.put(cell, direction)
+tracePathToExit(exitCell):
+    pathCells = Set<FlowFieldCell>
+    current = exitCell
+    while current is not null:
+        pathCells.add(current)
+        current = cameFrom.get(current)
+    return pathCells
+```
 
-    // Extend inward field outside the cave for smooth re-entry
-    extendInwardFieldToEntrance(inwardField, exitPoint, level)
+**Reachable Start Cell:**
 
-    // Build OUTWARD field by inverting inward vectors
-    outwardField = Map<FlowFieldCell, Vec3>
-    for cell, direction in inwardField:
-        outwardField.put(cell, direction.scale(-1))
+The roost block might be positioned such that its geometric cell's hub isn't directly reachable (e.g., roost is in a corner and the cell center is behind a wall). We handle this by checking reachability and falling back to neighboring cells:
 
-    return FlowFieldSolution(outwardField, inwardField, hubCache, exitPoint, roostPos)
+```
+findReachableStartCell():
+    hub = findHub(startCell)
+    if hub is not null and canReachHub(hub):
+        hubCache.put(startCell, hub)
+        return startCell
+
+    // Try all 6 neighbors
+    for neighbor in adjacent cells:
+        neighborHub = findHub(neighbor)
+        if neighborHub is not null and canReachHub(neighborHub):
+            hubCache.put(neighbor, neighborHub)
+            return neighbor
+
+    return null  // roost is completely enclosed
+
+canReachHub(hub):
+    // Raycast from roost position (below the roost block) to hub
+    return raycastClear(roostPos.below().center(), hub.center())
 ```
 
 **Cell Passability:**

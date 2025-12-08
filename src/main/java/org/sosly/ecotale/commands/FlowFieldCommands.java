@@ -85,25 +85,21 @@ public final class FlowFieldCommands {
             return 0;
         }
 
-        FlowFieldSolution solution = roost.getFlowFieldSolution();
-        if (solution == null) {
-            context.getSource().sendFailure(Component.literal("No flow field to validate"));
-            return 0;
-        }
+        FlowFieldSolution oldSolution = roost.getFlowFieldSolution();
+        boolean wasValid = oldSolution != null && !oldSolution.isFailed() && oldSolution.isValid(level);
 
-        if (solution.isFailed()) {
-            context.getSource().sendSuccess(
-                () -> Component.literal("Flow field failed, regeneration would be queued"),
-                false);
-            return 1;
-        }
+        roost.forceRevalidate();
 
-        boolean valid = solution.isValid(level);
-        if (valid) {
+        FlowFieldSolution newSolution = roost.getFlowFieldSolution();
+        if (wasValid && newSolution != null && !newSolution.isFailed()) {
             context.getSource().sendSuccess(() -> Component.literal("Flow field valid"), false);
+        } else if (newSolution != null && !newSolution.isFailed()) {
+            context.getSource().sendSuccess(
+                () -> Component.literal("Flow field regenerated successfully"),
+                false);
         } else {
             context.getSource().sendSuccess(
-                () -> Component.literal("Flow field invalid, regeneration queued"),
+                () -> Component.literal("Flow field invalid, regeneration failed (will retry with backoff)"),
                 false);
         }
         return 1;
