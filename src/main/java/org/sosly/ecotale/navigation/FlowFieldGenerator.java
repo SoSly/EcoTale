@@ -46,6 +46,7 @@ public class FlowFieldGenerator {
     private long startTime;
     private boolean aborted;
     private int iterationCount;
+    private FlowFieldCell actualStartCell;
 
     public FlowFieldGenerator(BlockPos roostPos, Level level) {
         this.roostPos = roostPos;
@@ -92,7 +93,7 @@ public class FlowFieldGenerator {
             }
         }
 
-        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, exitPoint, roostPos);
+        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, exitPoint, roostPos, actualStartCell);
     }
 
     private boolean checkTimeout() {
@@ -154,13 +155,13 @@ public class FlowFieldGenerator {
     }
 
     private FlowFieldCell runFloodFill() {
-        FlowFieldCell actualStart = findReachableStartCell();
-        if (aborted || actualStart == null) {
+        actualStartCell = findReachableStartCell();
+        if (aborted || actualStartCell == null) {
             return null;
         }
 
-        frontier.add(actualStart);
-        visited.add(actualStart);
+        frontier.add(actualStartCell);
+        visited.add(actualStartCell);
 
         while (!frontier.isEmpty()) {
             if (checkTimeout()) {

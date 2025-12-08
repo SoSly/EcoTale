@@ -6,13 +6,18 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.EntityRegistry;
+import org.sosly.ecotale.navigation.FlowFieldCell;
 import org.sosly.ecotale.navigation.FlowFieldManager;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 
@@ -26,6 +31,8 @@ public class RoostBlockEntity extends BlockEntity {
     private static final int MAX_RETRY_DELAY = 6000;
 
     private FlowFieldSolution flowFieldSolution;
+    private FlowFieldSolution candidateSolution;
+    private FlowFieldCell registeredStartCell;
     private int validationTicker = VALIDATION_INTERVAL;
     private int failureCount;
     private long nextRetryTick;
@@ -96,6 +103,19 @@ public class RoostBlockEntity extends BlockEntity {
             return;
         }
 
+        if (candidateSolution != null) {
+            if (canAdoptSolution(candidateSolution, level)) {
+                flowFieldSolution = candidateSolution;
+                registeredStartCell = candidateSolution.getStartCell();
+                FlowFieldManager.getInstance().registerRoost(this, registeredStartCell);
+                failureCount = 0;
+                nextRetryTick = 0;
+                setChanged();
+            }
+            candidateSolution = null;
+            return;
+        }
+
         long gameTime = level.getGameTime();
 
         if (flowFieldSolution == null || flowFieldSolution.isFailed()) {
@@ -107,6 +127,37 @@ public class RoostBlockEntity extends BlockEntity {
 
         pendingRequest = true;
         FlowFieldManager.getInstance().requestValidation(this, flowFieldSolution);
+    }
+
+    private boolean canAdoptSolution(FlowFieldSolution solution, Level level) {
+        FlowFieldCell myCell = FlowFieldCell.fromBlockPos(getBlockPos());
+        FlowFieldCell solutionStart = solution.getStartCell();
+        if (solutionStart == null || !myCell.equals(solutionStart)) {
+            return false;
+        }
+
+        BlockPos hub = solution.getHubPosition(solutionStart).orElse(null);
+        if (hub == null) {
+            return false;
+        }
+
+        Vec3 roostVec = Vec3.atCenterOf(getBlockPos().below());
+        Vec3 hubVec = Vec3.atCenterOf(hub);
+        if (!raycastClear(roostVec, hubVec, level)) {
+            return false;
+        }
+
+        return solution.isValid(level);
+    }
+
+    private boolean raycastClear(Vec3 from, Vec3 to, Level level) {
+        try {
+            ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
+            BlockHitResult result = level.clip(context);
+            return result.getType() == HitResult.Type.MISS;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void requestGenerationWithBackoff() {
@@ -127,6 +178,7 @@ public class RoostBlockEntity extends BlockEntity {
 
     public void onGenerationComplete(FlowFieldSolution solution) {
         pendingRequest = false;
+        candidateSolution = null;
 
         if (solution == null || solution.isFailed()) {
             handleGenerationFailure();
@@ -134,6 +186,7 @@ public class RoostBlockEntity extends BlockEntity {
         }
 
         flowFieldSolution = solution;
+        registeredStartCell = solution.getStartCell();
         failureCount = 0;
         nextRetryTick = 0;
         setChanged();
@@ -179,6 +232,24 @@ public class RoostBlockEntity extends BlockEntity {
             bat.setResting(true);
             bat.setHome(home);
             level.addFreshEntity(bat);
+        }
+    }
+
+    public void offerSolution(FlowFieldSolution solution) {
+        if (pendingRequest) {
+            return;
+        }
+        if (flowFieldSolution != null && !flowFieldSolution.isFailed()) {
+            return;
+        }
+        candidateSolution = solution;
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (registeredStartCell != null) {
+            FlowFieldManager.getInstance().unregisterRoost(this);
         }
     }
 }

@@ -1,6 +1,11 @@
 package org.sosly.ecotale.navigation;
 
+import java.lang.ref.WeakReference;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -24,12 +29,14 @@ public class FlowFieldManager {
     private static FlowFieldManager instance;
 
     private final BlockingQueue<FlowFieldRequest> requestQueue;
+    private final Map<FlowFieldCell, Set<WeakReference<RoostBlockEntity>>> roostsByStartCell;
     private ExecutorService workerThread;
     private MinecraftServer server;
     private volatile boolean running;
 
     private FlowFieldManager() {
         this.requestQueue = new LinkedBlockingQueue<>();
+        this.roostsByStartCell = new ConcurrentHashMap<>();
     }
 
     public static FlowFieldManager getInstance() {
@@ -197,6 +204,36 @@ public class FlowFieldManager {
             return;
         }
         roost.onGenerationComplete(solution);
+
+        if (solution != null && !solution.isFailed()) {
+            registerRoost(roost, solution.getStartCell());
+            broadcastSolution(roost, solution);
+        }
+    }
+
+    private void broadcastSolution(RoostBlockEntity source, FlowFieldSolution solution) {
+        FlowFieldCell startCell = solution.getStartCell();
+        if (startCell == null) {
+            return;
+        }
+
+        Set<WeakReference<RoostBlockEntity>> roosts = roostsByStartCell.get(startCell);
+        if (roosts == null) {
+            return;
+        }
+
+        Iterator<WeakReference<RoostBlockEntity>> iter = roosts.iterator();
+        while (iter.hasNext()) {
+            RoostBlockEntity target = iter.next().get();
+            if (target == null) {
+                iter.remove();
+                continue;
+            }
+            if (target == source || target.isRemoved()) {
+                continue;
+            }
+            target.offerSolution(solution);
+        }
     }
 
     private void deliverValidationResult(RoostBlockEntity roost, Boolean valid) {
@@ -204,5 +241,22 @@ public class FlowFieldManager {
             return;
         }
         roost.onValidationComplete(valid);
+    }
+
+    public void registerRoost(RoostBlockEntity roost, FlowFieldCell startCell) {
+        if (startCell == null) {
+            return;
+        }
+        roostsByStartCell.computeIfAbsent(startCell, k -> ConcurrentHashMap.newKeySet())
+            .add(new WeakReference<>(roost));
+    }
+
+    public void unregisterRoost(RoostBlockEntity roost) {
+        for (Set<WeakReference<RoostBlockEntity>> roosts : roostsByStartCell.values()) {
+            roosts.removeIf(ref -> {
+                RoostBlockEntity target = ref.get();
+                return target == null || target == roost;
+            });
+        }
     }
 }

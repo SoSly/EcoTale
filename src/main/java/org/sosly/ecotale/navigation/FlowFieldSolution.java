@@ -29,6 +29,7 @@ public class FlowFieldSolution {
     private static final String TAG_EXIT = "exit";
     private static final String TAG_ROOST = "roost";
     private static final String TAG_FAILED = "failed";
+    private static final String TAG_START = "start";
     private static final String TAG_CELL_X = "cx";
     private static final String TAG_CELL_Y = "cy";
     private static final String TAG_CELL_Z = "cz";
@@ -44,6 +45,7 @@ public class FlowFieldSolution {
     private final Map<FlowFieldCell, BlockPos> hubCache;
     private final BlockPos exitPoint;
     private final BlockPos roostPos;
+    private final FlowFieldCell startCell;
     private final boolean failed;
 
     private FlowFieldSolution(
@@ -52,12 +54,14 @@ public class FlowFieldSolution {
             Map<FlowFieldCell, BlockPos> hubCache,
             BlockPos exitPoint,
             BlockPos roostPos,
+            FlowFieldCell startCell,
             boolean failed) {
         this.outwardField = outwardField;
         this.inwardField = inwardField;
         this.hubCache = hubCache;
         this.exitPoint = exitPoint;
         this.roostPos = roostPos;
+        this.startCell = startCell;
         this.failed = failed;
     }
 
@@ -66,13 +70,15 @@ public class FlowFieldSolution {
             Map<FlowFieldCell, Vec3> inwardField,
             Map<FlowFieldCell, BlockPos> hubCache,
             BlockPos exitPoint,
-            BlockPos roostPos) {
+            BlockPos roostPos,
+            FlowFieldCell startCell) {
         return new FlowFieldSolution(
             new HashMap<>(outwardField),
             new HashMap<>(inwardField),
             new HashMap<>(hubCache),
             exitPoint,
             roostPos,
+            startCell,
             false
         );
     }
@@ -84,6 +90,7 @@ public class FlowFieldSolution {
             Map.of(),
             null,
             roostPos,
+            null,
             true
         );
     }
@@ -110,6 +117,10 @@ public class FlowFieldSolution {
 
     public BlockPos getRoostPos() {
         return roostPos;
+    }
+
+    public FlowFieldCell getStartCell() {
+        return startCell;
     }
 
     /**
@@ -351,6 +362,10 @@ public class FlowFieldSolution {
         tag.putInt(TAG_EXIT + "Y", exitPoint.getY());
         tag.putInt(TAG_EXIT + "Z", exitPoint.getZ());
 
+        tag.putInt(TAG_START + "X", startCell.x());
+        tag.putInt(TAG_START + "Y", startCell.y());
+        tag.putInt(TAG_START + "Z", startCell.z());
+
         tag.put(TAG_OUTWARD, saveVectorField(outwardField));
         tag.put(TAG_INWARD, saveVectorField(inwardField));
         tag.put(TAG_HUBS, saveHubCache(hubCache));
@@ -378,11 +393,17 @@ public class FlowFieldSolution {
             tag.getInt(TAG_EXIT + "Z")
         );
 
+        FlowFieldCell startCell = new FlowFieldCell(
+            tag.getInt(TAG_START + "X"),
+            tag.getInt(TAG_START + "Y"),
+            tag.getInt(TAG_START + "Z")
+        );
+
         Map<FlowFieldCell, Vec3> outwardField = loadVectorField(tag.getList(TAG_OUTWARD, Tag.TAG_COMPOUND));
         Map<FlowFieldCell, Vec3> inwardField = loadVectorField(tag.getList(TAG_INWARD, Tag.TAG_COMPOUND));
         Map<FlowFieldCell, BlockPos> hubCache = loadHubCache(tag.getList(TAG_HUBS, Tag.TAG_COMPOUND));
 
-        return new FlowFieldSolution(outwardField, inwardField, hubCache, exitPoint, roostPos, false);
+        return new FlowFieldSolution(outwardField, inwardField, hubCache, exitPoint, roostPos, startCell, false);
     }
 
     private static ListTag saveVectorField(Map<FlowFieldCell, Vec3> field) {

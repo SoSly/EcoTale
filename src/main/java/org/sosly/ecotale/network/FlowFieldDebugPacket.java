@@ -94,8 +94,9 @@ public class FlowFieldDebugPacket {
             inward.put(cell, vec);
         }
 
+        FlowFieldCell startCell = FlowFieldCell.fromBlockPos(roostPos);
         FlowFieldSolution solution = FlowFieldSolution.create(
-            outward, inward, Map.of(), exitPoint, roostPos
+            outward, inward, Map.of(), exitPoint, roostPos, startCell
         );
 
         return new FlowFieldDebugPacket(roostPos, false, solution);
