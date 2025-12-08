@@ -4,11 +4,9 @@ import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.mojang.logging.LogUtils;
@@ -19,23 +17,22 @@ import org.slf4j.Logger;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 
 /**
- * Manages flow field generation requests on a dedicated worker thread.
+ * Manages flow field generation requests using a thread pool.
  * All generation and validation runs off the main thread to prevent lag spikes.
  */
 public class FlowFieldManager {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final int QUEUE_POLL_TIMEOUT_SECONDS = 1;
+    private static final int POOL_SIZE = 2;
 
     private static FlowFieldManager instance;
 
-    private final BlockingQueue<FlowFieldRequest> requestQueue;
     private final Map<FlowFieldCell, Set<WeakReference<RoostBlockEntity>>> roostsByStartCell;
-    private ExecutorService workerThread;
+    private ExecutorService workerPool;
+    private ExecutorService priorityWorker;
     private MinecraftServer server;
     private volatile boolean running;
 
     private FlowFieldManager() {
-        this.requestQueue = new LinkedBlockingQueue<>();
         this.roostsByStartCell = new ConcurrentHashMap<>();
     }
 
@@ -47,7 +44,7 @@ public class FlowFieldManager {
     }
 
     /**
-     * Starts the flow field worker thread. Called on server start.
+     * Starts the flow field worker pool. Called on server start.
      */
     public void start(MinecraftServer server) {
         if (running) {
@@ -56,18 +53,28 @@ public class FlowFieldManager {
 
         this.server = server;
         this.running = true;
-        this.workerThread = Executors.newSingleThreadExecutor(r -> {
-            Thread thread = new Thread(r, "EcoTale-FlowField-Worker");
+        this.workerPool = Executors.newFixedThreadPool(POOL_SIZE, new java.util.concurrent.ThreadFactory() {
+            private int threadNum = 0;
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, "EcoTale-FlowField-" + threadNum++);
+                thread.setDaemon(true);
+                return thread;
+            }
+        });
+
+        this.priorityWorker = Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "EcoTale-FlowField-Priority");
             thread.setDaemon(true);
             return thread;
         });
 
-        workerThread.submit(this::workerLoop);
-        LOGGER.info("FlowField worker thread started");
+        LOGGER.info("FlowField worker pool started with {} threads + priority", POOL_SIZE);
     }
 
     /**
-     * Stops the flow field worker thread. Called on server stop.
+     * Stops the flow field worker pool. Called on server stop.
      */
     public void stop() {
         if (!running) {
@@ -75,27 +82,39 @@ public class FlowFieldManager {
         }
 
         running = false;
-        requestQueue.clear();
 
-        if (workerThread != null) {
-            workerThread.shutdown();
+        if (workerPool != null) {
+            workerPool.shutdown();
             try {
-                if (!workerThread.awaitTermination(5, TimeUnit.SECONDS)) {
-                    workerThread.shutdownNow();
+                if (!workerPool.awaitTermination(5, TimeUnit.SECONDS)) {
+                    workerPool.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                workerThread.shutdownNow();
+                workerPool.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-            workerThread = null;
+            workerPool = null;
+        }
+
+        if (priorityWorker != null) {
+            priorityWorker.shutdown();
+            try {
+                if (!priorityWorker.awaitTermination(2, TimeUnit.SECONDS)) {
+                    priorityWorker.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                priorityWorker.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            priorityWorker = null;
         }
 
         server = null;
-        LOGGER.info("FlowField worker thread stopped");
+        LOGGER.info("FlowField worker pool stopped");
     }
 
     /**
-     * Queues a generation request for the given roost.
+     * Submits a generation request for the given roost.
      */
     public void requestGeneration(RoostBlockEntity roost) {
         Level level = roost.getLevel();
@@ -109,11 +128,17 @@ public class FlowFieldManager {
                 level,
                 solution -> deliverResult(roost, solution)
         );
-        requestQueue.offer(request);
+        workerPool.submit(() -> {
+            try {
+                processRequest(request);
+            } catch (Exception e) {
+                LOGGER.error("Error processing flow field generation at {}", roostPos, e);
+            }
+        });
     }
 
     /**
-     * Queues a validation request for the given roost.
+     * Submits a validation request for the given roost.
      */
     public void requestValidation(RoostBlockEntity roost, FlowFieldSolution solution) {
         Level level = roost.getLevel();
@@ -128,25 +153,37 @@ public class FlowFieldManager {
                 solution,
                 valid -> deliverValidationResult(roost, valid)
         );
-        requestQueue.offer(request);
+        workerPool.submit(() -> {
+            try {
+                processRequest(request);
+            } catch (Exception e) {
+                LOGGER.error("Error processing flow field validation at {}", roostPos, e);
+            }
+        });
     }
 
-    private void workerLoop() {
-        while (running) {
-            try {
-                FlowFieldRequest request = requestQueue.poll(QUEUE_POLL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                if (request == null) {
-                    continue;
-                }
-
-                processRequest(request);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                LOGGER.error("Error in FlowField worker", e);
-            }
+    /**
+     * Submits a priority generation request that bypasses the normal queue.
+     */
+    public void requestPriorityGeneration(RoostBlockEntity roost) {
+        Level level = roost.getLevel();
+        if (level == null || !running) {
+            return;
         }
+
+        BlockPos roostPos = roost.getBlockPos();
+        FlowFieldRequest request = FlowFieldRequest.generation(
+                roostPos,
+                level,
+                solution -> deliverResult(roost, solution)
+        );
+        priorityWorker.submit(() -> {
+            try {
+                processRequest(request);
+            } catch (Exception e) {
+                LOGGER.error("Error processing priority flow field generation at {}", roostPos, e);
+            }
+        });
     }
 
     private void processRequest(FlowFieldRequest request) {

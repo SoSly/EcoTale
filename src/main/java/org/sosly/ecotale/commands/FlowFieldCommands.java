@@ -41,7 +41,11 @@ public final class FlowFieldCommands {
             .then(Commands.literal("revalidate")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                    .executes(FlowFieldCommands::revalidate)));
+                    .executes(FlowFieldCommands::revalidate)))
+            .then(Commands.literal("regenerate")
+                .requires(source -> source.hasPermission(2))
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                    .executes(FlowFieldCommands::regenerate)));
     }
 
     private static int visualize(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -102,6 +106,22 @@ public final class FlowFieldCommands {
                 () -> Component.literal("Flow field invalid, regeneration failed (will retry with backoff)"),
                 false);
         }
+        return 1;
+    }
+
+    private static int regenerate(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, "pos");
+        ServerLevel level = context.getSource().getLevel();
+
+        RoostBlockEntity roost = getRoostBlockEntity(context, level, pos);
+        if (roost == null) {
+            return 0;
+        }
+
+        roost.forceRegenerate();
+        context.getSource().sendSuccess(
+            () -> Component.literal("Flow field regeneration queued for " + pos.toShortString()),
+            false);
         return 1;
     }
 
