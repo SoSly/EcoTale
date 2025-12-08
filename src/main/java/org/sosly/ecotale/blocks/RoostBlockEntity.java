@@ -29,6 +29,7 @@ public class RoostBlockEntity extends BlockEntity {
     private int validationTicker = VALIDATION_INTERVAL;
     private int failureCount;
     private long nextRetryTick;
+    private boolean pendingRequest;
 
     public RoostBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityRegistry.ROOST.get(), pos, state);
@@ -41,8 +42,8 @@ public class RoostBlockEntity extends BlockEntity {
         if (level == null || level.isClientSide()) {
             return;
         }
-        if (flowFieldSolution == null) {
-            FlowFieldManager.getInstance().requestGeneration(this);
+        if (flowFieldSolution == null && !pendingRequest) {
+            requestGenerationWithBackoff();
         }
     }
 
@@ -91,53 +92,71 @@ public class RoostBlockEntity extends BlockEntity {
 
     private void validateAndRegenerate() {
         Level level = getLevel();
-        if (level == null || level.isClientSide()) {
+        if (level == null || level.isClientSide() || pendingRequest) {
             return;
         }
 
         long gameTime = level.getGameTime();
 
-        if (flowFieldSolution == null) {
+        if (flowFieldSolution == null || flowFieldSolution.isFailed()) {
             if (gameTime >= nextRetryTick) {
                 requestGenerationWithBackoff();
             }
             return;
         }
 
-        if (flowFieldSolution.isFailed()) {
-            if (gameTime >= nextRetryTick) {
-                requestGenerationWithBackoff();
-            }
+        pendingRequest = true;
+        FlowFieldManager.getInstance().requestValidation(this, flowFieldSolution);
+    }
+
+    private void requestGenerationWithBackoff() {
+        if (pendingRequest) {
             return;
         }
 
-        long startTime = System.nanoTime();
-        boolean valid = flowFieldSolution.isValid(level);
-        long elapsed = System.nanoTime() - startTime;
+        pendingRequest = true;
+        FlowFieldManager.getInstance().requestGeneration(this);
+    }
 
-        LOGGER.debug("FlowField validation at {}: {}ms, valid={}",
-                getBlockPos(), elapsed / 1_000_000.0, valid);
+    public void forceRevalidate() {
+        failureCount = 0;
+        nextRetryTick = 0;
+        pendingRequest = false;
+        validateAndRegenerate();
+    }
+
+    public void onGenerationComplete(FlowFieldSolution solution) {
+        pendingRequest = false;
+
+        if (solution == null || solution.isFailed()) {
+            handleGenerationFailure();
+            return;
+        }
+
+        flowFieldSolution = solution;
+        failureCount = 0;
+        nextRetryTick = 0;
+        setChanged();
+    }
+
+    public void onValidationComplete(Boolean valid) {
+        pendingRequest = false;
 
         if (!valid) {
             requestGenerationWithBackoff();
         }
     }
 
-    private void requestGenerationWithBackoff() {
-        FlowFieldManager.getInstance().requestGeneration(this);
-
-        if (flowFieldSolution == null || flowFieldSolution.isFailed()) {
-            failureCount++;
-            int delay = Math.min(BASE_RETRY_DELAY * (1 << (failureCount - 1)), MAX_RETRY_DELAY);
-            nextRetryTick = getLevel().getGameTime() + delay;
-            setChanged();
+    private void handleGenerationFailure() {
+        Level level = getLevel();
+        if (level == null) {
+            return;
         }
-    }
 
-    public void forceRevalidate() {
-        failureCount = 0;
-        nextRetryTick = 0;
-        validateAndRegenerate();
+        failureCount++;
+        int delay = Math.min(BASE_RETRY_DELAY * (1 << (failureCount - 1)), MAX_RETRY_DELAY);
+        nextRetryTick = level.getGameTime() + delay;
+        setChanged();
     }
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {

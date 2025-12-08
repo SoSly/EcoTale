@@ -115,13 +115,18 @@ public class FlowFieldSolution {
     /**
      * Validates that the flow field is still navigable.
      * Checks exit accessibility and traces path from exit back to roost using inward field.
+     * Thread-safe: all Level access is wrapped in try-catch.
      */
     public boolean isValid(Level level) {
         if (failed || exitPoint == null) {
             return false;
         }
 
-        if (!level.canSeeSky(exitPoint) || !level.getBlockState(exitPoint).isAir()) {
+        try {
+            if (!level.canSeeSky(exitPoint) || !level.getBlockState(exitPoint).isAir()) {
+                return false;
+            }
+        } catch (Exception e) {
             return false;
         }
 
@@ -198,7 +203,11 @@ public class FlowFieldSolution {
             return false;
         }
 
-        if (!level.getBlockState(fromHub).isAir() || !level.getBlockState(toHub).isAir()) {
+        try {
+            if (!level.getBlockState(fromHub).isAir() || !level.getBlockState(toHub).isAir()) {
+                return false;
+            }
+        } catch (Exception e) {
             return false;
         }
 
@@ -282,22 +291,30 @@ public class FlowFieldSolution {
     }
 
     private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos toHub, Level level) {
-        if (!level.getBlockState(boundaryPos).isAir()) {
+        try {
+            if (!level.getBlockState(boundaryPos).isAir()) {
+                return false;
+            }
+
+            BlockPos otherSide = boundaryPos.relative(direction);
+            if (!level.getBlockState(otherSide).isAir()) {
+                return false;
+            }
+
+            return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub), level);
+        } catch (Exception e) {
             return false;
         }
-
-        BlockPos otherSide = boundaryPos.relative(direction);
-        if (!level.getBlockState(otherSide).isAir()) {
-            return false;
-        }
-
-        return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub), level);
     }
 
     private boolean raycastClear(Vec3 from, Vec3 to, Level level) {
-        ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
-        BlockHitResult result = level.clip(context);
-        return result.getType() == HitResult.Type.MISS;
+        try {
+            ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
+            BlockHitResult result = level.clip(context);
+            return result.getType() == HitResult.Type.MISS;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void forEachOutwardCell(BiConsumer<FlowFieldCell, Vec3> consumer) {

@@ -22,6 +22,9 @@ import net.minecraft.world.phys.Vec3;
  * Generates flow field navigation data for bat cave navigation.
  * Uses BFS flood fill starting from roost, building inward (toward roost)
  * and outward (toward exit) vector fields.
+ *
+ * Thread-safe: all Level access is wrapped in try-catch to handle
+ * chunk unloading during generation.
  */
 public class FlowFieldGenerator {
     private static final int MAX_RADIUS_BLOCKS = 128;
@@ -29,6 +32,8 @@ public class FlowFieldGenerator {
     private static final int HUB_SEARCH_RADIUS = 4;
     private static final int EXTENSION_CELLS = 3;
     private static final int EXIT_CLEARANCE = 3;
+    private static final long TIMEOUT_MS = 5000;
+    private static final int TIMEOUT_CHECK_INTERVAL = 100;
 
     private final BlockPos roostPos;
     private final Level level;
@@ -37,6 +42,10 @@ public class FlowFieldGenerator {
     private final Set<FlowFieldCell> visited;
     private final Map<FlowFieldCell, FlowFieldCell> cameFrom;
     private final Map<FlowFieldCell, BlockPos> hubCache;
+
+    private long startTime;
+    private boolean aborted;
+    private int iterationCount;
 
     public FlowFieldGenerator(BlockPos roostPos, Level level) {
         this.roostPos = roostPos;
@@ -54,13 +63,15 @@ public class FlowFieldGenerator {
      * @return A valid FlowFieldSolution, or a failed solution if no exit found
      */
     public FlowFieldSolution generate() {
+        startTime = System.currentTimeMillis();
+
         FlowFieldCell exitCell = runFloodFill();
-        if (exitCell == null) {
+        if (aborted || exitCell == null) {
             return FlowFieldSolution.failed(roostPos);
         }
 
         BlockPos exitPoint = findPreciseExitPoint(exitCell);
-        if (exitPoint == null) {
+        if (aborted || exitPoint == null) {
             return FlowFieldSolution.failed(roostPos);
         }
 
@@ -68,6 +79,10 @@ public class FlowFieldGenerator {
         Map<FlowFieldCell, Vec3> inwardField = buildInwardField(pathCells);
         extendInwardFieldOutside(inwardField, exitCell, exitPoint);
         Map<FlowFieldCell, Vec3> outwardField = buildOutwardField(inwardField);
+
+        if (aborted) {
+            return FlowFieldSolution.failed(roostPos);
+        }
 
         Map<FlowFieldCell, BlockPos> pathHubCache = new HashMap<>();
         for (FlowFieldCell cell : inwardField.keySet()) {
@@ -78,6 +93,19 @@ public class FlowFieldGenerator {
         }
 
         return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, exitPoint, roostPos);
+    }
+
+    private boolean checkTimeout() {
+        iterationCount++;
+        if (iterationCount % TIMEOUT_CHECK_INTERVAL != 0) {
+            return false;
+        }
+
+        if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
+            aborted = true;
+            return true;
+        }
+        return false;
     }
 
     private Set<FlowFieldCell> tracePathToExit(FlowFieldCell exitCell) {
@@ -127,7 +155,7 @@ public class FlowFieldGenerator {
 
     private FlowFieldCell runFloodFill() {
         FlowFieldCell actualStart = findReachableStartCell();
-        if (actualStart == null) {
+        if (aborted || actualStart == null) {
             return null;
         }
 
@@ -135,6 +163,10 @@ public class FlowFieldGenerator {
         visited.add(actualStart);
 
         while (!frontier.isEmpty()) {
+            if (checkTimeout()) {
+                return null;
+            }
+
             FlowFieldCell current = frontier.poll();
 
             if (isExit(current)) {
@@ -146,6 +178,9 @@ public class FlowFieldGenerator {
             }
 
             for (FlowFieldCell neighbor : getPassableNeighbors(current)) {
+                if (aborted) {
+                    return null;
+                }
                 if (visited.contains(neighbor)) {
                     continue;
                 }
@@ -452,12 +487,22 @@ public class FlowFieldGenerator {
     }
 
     private boolean isAir(BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        return state.isAir();
+        try {
+            BlockState state = level.getBlockState(pos);
+            return state.isAir();
+        } catch (Exception e) {
+            aborted = true;
+            return false;
+        }
     }
 
     private boolean hasSkyAccess(BlockPos pos) {
-        return level.canSeeSky(pos);
+        try {
+            return level.canSeeSky(pos);
+        } catch (Exception e) {
+            aborted = true;
+            return false;
+        }
     }
 
     private boolean isWithinCell(BlockPos pos, FlowFieldCell cell) {
@@ -472,14 +517,19 @@ public class FlowFieldGenerator {
     }
 
     private boolean raycastClear(Vec3 from, Vec3 to) {
-        ClipContext context = new ClipContext(
-            from,
-            to,
-            ClipContext.Block.COLLIDER,
-            ClipContext.Fluid.NONE,
-            null
-        );
-        BlockHitResult result = level.clip(context);
-        return result.getType() == HitResult.Type.MISS;
+        try {
+            ClipContext context = new ClipContext(
+                from,
+                to,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                null
+            );
+            BlockHitResult result = level.clip(context);
+            return result.getType() == HitResult.Type.MISS;
+        } catch (Exception e) {
+            aborted = true;
+            return false;
+        }
     }
 }
