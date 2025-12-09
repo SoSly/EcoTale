@@ -31,6 +31,7 @@ public class FlowFieldManager {
     private ExecutorService priorityWorker;
     private MinecraftServer server;
     private volatile boolean running;
+    private volatile boolean paused;
 
     private FlowFieldManager() {
         this.roostsByStartCell = new ConcurrentHashMap<>();
@@ -114,11 +115,29 @@ public class FlowFieldManager {
     }
 
     /**
+     * Pauses normal generation/validation requests. Priority requests still run.
+     */
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+        LOGGER.info("FlowField generation {}", paused ? "paused" : "resumed");
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /**
      * Submits a generation request for the given roost.
      */
     public void requestGeneration(RoostBlockEntity roost) {
+        if (!running) {
+            return;
+        }
+        if (paused) {
+            return;
+        }
         Level level = roost.getLevel();
-        if (level == null || !running) {
+        if (level == null) {
             return;
         }
 
@@ -141,8 +160,17 @@ public class FlowFieldManager {
      * Submits a validation request for the given roost.
      */
     public void requestValidation(RoostBlockEntity roost, FlowFieldSolution solution) {
+        if (!running) {
+            return;
+        }
+        if (paused) {
+            return;
+        }
+        if (solution == null) {
+            return;
+        }
         Level level = roost.getLevel();
-        if (level == null || !running || solution == null) {
+        if (level == null) {
             return;
         }
 
@@ -166,8 +194,11 @@ public class FlowFieldManager {
      * Submits a priority generation request that bypasses the normal queue.
      */
     public void requestPriorityGeneration(RoostBlockEntity roost) {
+        if (!running) {
+            return;
+        }
         Level level = roost.getLevel();
-        if (level == null || !running) {
+        if (level == null) {
             return;
         }
 

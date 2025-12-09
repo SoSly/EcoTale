@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import org.sosly.ecotale.blocks.AbstractRoostBlock;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
+import org.sosly.ecotale.navigation.FlowFieldManager;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 import org.sosly.ecotale.network.FlowFieldDebugPacket;
 import org.sosly.ecotale.network.NetworkHandler;
@@ -58,7 +59,10 @@ public final class FlowFieldCommands {
                 .requires(source -> source.hasPermission(2))
                 .executes(ctx -> showRoosts(ctx, DEFAULT_ROOST_SCAN_RADIUS))
                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, MAX_ROOST_SCAN_RADIUS))
-                    .executes(ctx -> showRoosts(ctx, IntegerArgumentType.getInteger(ctx, "radius")))));
+                    .executes(ctx -> showRoosts(ctx, IntegerArgumentType.getInteger(ctx, "radius")))))
+            .then(Commands.literal("pause")
+                .requires(source -> source.hasPermission(2))
+                .executes(FlowFieldCommands::togglePause));
     }
 
     private static int visualize(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -91,6 +95,18 @@ public final class FlowFieldCommands {
         NetworkHandler.sendToPlayer(player, FlowFieldDebugPacket.clearAll());
         NetworkHandler.sendToPlayer(player, RoostStatusPacket.clearAll());
         context.getSource().sendSuccess(() -> Component.literal("Cleared all flow field visualizations"), false);
+        return 1;
+    }
+
+    private static int togglePause(CommandContext<CommandSourceStack> context) {
+        FlowFieldManager manager = FlowFieldManager.getInstance();
+        boolean newState = !manager.isPaused();
+        manager.setPaused(newState);
+
+        String message = newState
+            ? "Flow field generation paused (priority/manual requests still work)"
+            : "Flow field generation resumed";
+        context.getSource().sendSuccess(() -> Component.literal(message), true);
         return 1;
     }
 
