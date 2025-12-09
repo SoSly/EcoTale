@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.phys.Vec3;
-import org.sosly.ecotale.Constants;
+import org.sosly.ecotale.entities.ai.AIConstants;
 import org.sosly.ecotale.api.entities.IFlyingMob;
 import org.sosly.ecotale.entities.ai.util.FlyingMobRandomPos;
 
@@ -54,13 +54,13 @@ public class FlyingRandomStroll<T extends Mob & IFlyingMob<T>> extends Behavior<
 
     @Override
     protected void tick(ServerLevel level, T mob, long gameTime) {
-        if (gameTime - lastNavTick < Constants.NAV_INTERVAL_TICKS) {
+        if (gameTime - lastNavTick < AIConstants.NAV_INTERVAL_TICKS) {
             return;
         }
         lastNavTick = gameTime;
 
         if (targetPos != null && !mob.getNavigation().isInProgress()) {
-            mob.getNavigation().moveTo(targetPos.x, targetPos.y, targetPos.z, 1.0);
+            mob.getNavigation().moveTo(targetPos.x, targetPos.y, targetPos.z, AIConstants.DEFAULT_FLY_SPEED);
         }
     }
 

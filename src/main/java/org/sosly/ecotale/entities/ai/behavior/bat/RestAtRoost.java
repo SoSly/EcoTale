@@ -7,10 +7,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import org.sosly.ecotale.entities.ai.AIConstants;
 import org.sosly.ecotale.entities.EcoTaleBat;
 
 public class RestAtRoost extends Behavior<EcoTaleBat> {
-    private static final int START_DISTANCE = 4;
     private static final int FINAL_DISTANCE = 1;
 
     private BlockPos hangPos;
@@ -26,7 +26,7 @@ public class RestAtRoost extends Behavior<EcoTaleBat> {
         }
 
         GlobalPos roostPos = bat.getBrain().getMemory(MemoryModuleType.HOME).orElse(null);
-        return roostPos != null && isNearRoost(level, bat, roostPos, START_DISTANCE);
+        return roostPos != null && isNearRoost(level, bat, roostPos, AIConstants.ROOST_APPROACH_DISTANCE);
     }
 
     protected boolean canStillUse(ServerLevel level, EcoTaleBat bat) {

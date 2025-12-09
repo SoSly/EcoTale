@@ -9,11 +9,11 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.sosly.ecotale.entities.ai.AIConstants;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.entities.EcoTaleBat;
 
 public class DropGuano extends Behavior<EcoTaleBat> {
-    private static final int TICKS_PER_DAY = 24000;
 
     public DropGuano() {
         super(ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_PRESENT));
@@ -32,7 +32,7 @@ public class DropGuano extends Behavior<EcoTaleBat> {
     @Override
     protected void tick(ServerLevel level, EcoTaleBat bat, long gameTime) {
         RandomSource random = bat.getRandom();
-        if (random.nextInt(TICKS_PER_DAY) != 0) {
+        if (random.nextInt(AIConstants.TICKS_PER_DAY) != 0) {
             return;
         }
 

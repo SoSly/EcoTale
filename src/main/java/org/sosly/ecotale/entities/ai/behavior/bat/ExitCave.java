@@ -9,7 +9,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import org.sosly.ecotale.Constants;
+import org.sosly.ecotale.entities.ai.AIConstants;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
@@ -67,7 +67,7 @@ public class ExitCave extends Behavior<EcoTaleBat> {
 
     @Override
     protected void tick(ServerLevel level, EcoTaleBat bat, long gameTime) {
-        if (gameTime - lastNavTick < Constants.NAV_INTERVAL_TICKS) {
+        if (gameTime - lastNavTick < AIConstants.NAV_INTERVAL_TICKS) {
             return;
         }
         lastNavTick = gameTime;
@@ -142,10 +142,10 @@ public class ExitCave extends Behavior<EcoTaleBat> {
     }
 
     private void navigateToHub(EcoTaleBat bat, BlockPos hub) {
-        bat.getNavigation().moveTo(hub.getX() + 0.5, hub.getY() + 0.5, hub.getZ() + 0.5, 1.0);
+        bat.getNavigation().moveTo(hub.getX() + 0.5, hub.getY() + 0.5, hub.getZ() + 0.5, AIConstants.DEFAULT_FLY_SPEED);
     }
 
     private void navigateDirectlyToward(EcoTaleBat bat, Vec3 target) {
-        bat.getNavigation().moveTo(target.x, target.y, target.z, 1.0);
+        bat.getNavigation().moveTo(target.x, target.y, target.z, AIConstants.DEFAULT_FLY_SPEED);
     }
 }
