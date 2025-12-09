@@ -117,6 +117,7 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
 
     runtimeOnly fg.deobf("curse.maven:jei-${jei_projectId}:${jei_fileId}")
+    runtimeOnly fg.deobf("curse.maven:spark-${spark_projectId}:${spark_fileId}")
     devMods fg.deobf("curse.maven:journeymap-${journeymap_projectId}:${journeymap_fileId}") // NPE on Minecraft.getInstance() during datagen
 }
 
