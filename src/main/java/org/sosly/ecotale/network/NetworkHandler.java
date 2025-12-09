@@ -28,6 +28,12 @@ public final class NetworkHandler {
             .encoder(FlowFieldDebugPacket::encode)
             .consumerMainThread(FlowFieldDebugPacket::handle)
             .add();
+
+        CHANNEL.messageBuilder(RoostStatusPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+            .decoder(RoostStatusPacket::decode)
+            .encoder(RoostStatusPacket::encode)
+            .consumerMainThread(RoostStatusPacket::handle)
+            .add();
     }
 
     public static void sendToPlayer(ServerPlayer player, Object packet) {

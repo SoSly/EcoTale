@@ -17,12 +17,16 @@ import org.joml.Matrix4f;
 import org.sosly.ecotale.navigation.FlowFieldCell;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @OnlyIn(Dist.CLIENT)
 public final class FlowFieldDebugRenderer {
     private static final Map<BlockPos, FlowFieldSolution> ACTIVE_RENDERS = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> ROOSTS_WITH_FLOWFIELD = ConcurrentHashMap.newKeySet();
+    private static final Set<BlockPos> ROOSTS_WITHOUT_FLOWFIELD = ConcurrentHashMap.newKeySet();
 
     private static final float OUTWARD_R = 1.0f;
     private static final float OUTWARD_G = 0.5f;
@@ -47,6 +51,14 @@ public final class FlowFieldDebugRenderer {
     private static final float HUB_R = 0.8f;
     private static final float HUB_G = 0.0f;
     private static final float HUB_B = 1.0f;
+
+    private static final float ROOST_OK_R = 0.0f;
+    private static final float ROOST_OK_G = 1.0f;
+    private static final float ROOST_OK_B = 0.0f;
+
+    private static final float ROOST_MISSING_R = 1.0f;
+    private static final float ROOST_MISSING_G = 0.0f;
+    private static final float ROOST_MISSING_B = 0.0f;
 
     private static final float LINE_ALPHA = 1.0f;
     private static final int EXIT_COLUMN_HEIGHT = 5;
@@ -73,8 +85,23 @@ public final class FlowFieldDebugRenderer {
         return ACTIVE_RENDERS.containsKey(roostPos);
     }
 
+    public static void setRoostStatus(List<BlockPos> withFlowField, List<BlockPos> withoutFlowField) {
+        ROOSTS_WITH_FLOWFIELD.clear();
+        ROOSTS_WITHOUT_FLOWFIELD.clear();
+        ROOSTS_WITH_FLOWFIELD.addAll(withFlowField);
+        ROOSTS_WITHOUT_FLOWFIELD.addAll(withoutFlowField);
+    }
+
+    public static void clearRoostStatus() {
+        ROOSTS_WITH_FLOWFIELD.clear();
+        ROOSTS_WITHOUT_FLOWFIELD.clear();
+    }
+
     public static void render(PoseStack poseStack) {
-        if (ACTIVE_RENDERS.isEmpty()) {
+        boolean hasFlowFieldRenders = !ACTIVE_RENDERS.isEmpty();
+        boolean hasRoostStatus = !ROOSTS_WITH_FLOWFIELD.isEmpty() || !ROOSTS_WITHOUT_FLOWFIELD.isEmpty();
+
+        if (!hasFlowFieldRenders && !hasRoostStatus) {
             return;
         }
 
@@ -98,6 +125,14 @@ public final class FlowFieldDebugRenderer {
 
         for (FlowFieldSolution solution : ACTIVE_RENDERS.values()) {
             renderSolution(buffer, matrix, solution);
+        }
+
+        for (BlockPos pos : ROOSTS_WITH_FLOWFIELD) {
+            renderBlockOutline(buffer, matrix, pos, ROOST_OK_R, ROOST_OK_G, ROOST_OK_B);
+        }
+
+        for (BlockPos pos : ROOSTS_WITHOUT_FLOWFIELD) {
+            renderBlockOutline(buffer, matrix, pos, ROOST_MISSING_R, ROOST_MISSING_G, ROOST_MISSING_B);
         }
 
         tesselator.end();

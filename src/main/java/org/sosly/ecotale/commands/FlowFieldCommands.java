@@ -1,6 +1,7 @@
 package org.sosly.ecotale.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -17,8 +18,15 @@ import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 import org.sosly.ecotale.network.FlowFieldDebugPacket;
 import org.sosly.ecotale.network.NetworkHandler;
+import org.sosly.ecotale.network.RoostStatusPacket;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class FlowFieldCommands {
+    private static final int DEFAULT_ROOST_SCAN_RADIUS = 64;
+    private static final int MAX_ROOST_SCAN_RADIUS = 512;
+
     private FlowFieldCommands() {
     }
 
@@ -45,7 +53,12 @@ public final class FlowFieldCommands {
             .then(Commands.literal("regenerate")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                    .executes(FlowFieldCommands::regenerate)));
+                    .executes(FlowFieldCommands::regenerate)))
+            .then(Commands.literal("roosts")
+                .requires(source -> source.hasPermission(2))
+                .executes(ctx -> showRoosts(ctx, DEFAULT_ROOST_SCAN_RADIUS))
+                .then(Commands.argument("radius", IntegerArgumentType.integer(1, MAX_ROOST_SCAN_RADIUS))
+                    .executes(ctx -> showRoosts(ctx, IntegerArgumentType.getInteger(ctx, "radius")))));
     }
 
     private static int visualize(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -76,6 +89,7 @@ public final class FlowFieldCommands {
     private static int clearVisualization(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         NetworkHandler.sendToPlayer(player, FlowFieldDebugPacket.clearAll());
+        NetworkHandler.sendToPlayer(player, RoostStatusPacket.clearAll());
         context.getSource().sendSuccess(() -> Component.literal("Cleared all flow field visualizations"), false);
         return 1;
     }
@@ -121,6 +135,54 @@ public final class FlowFieldCommands {
         roost.forceRegenerate();
         context.getSource().sendSuccess(
             () -> Component.literal("Flow field regeneration queued for " + pos.toShortString()),
+            false);
+        return 1;
+    }
+
+    private static int showRoosts(CommandContext<CommandSourceStack> context, int radius)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ServerLevel level = context.getSource().getLevel();
+        BlockPos playerPos = player.blockPosition();
+
+        List<BlockPos> withFlowField = new ArrayList<>();
+        List<BlockPos> withoutFlowField = new ArrayList<>();
+
+        BlockPos.betweenClosedStream(
+            playerPos.offset(-radius, -radius, -radius),
+            playerPos.offset(radius, radius, radius)
+        ).forEach(pos -> {
+            BlockState state = level.getBlockState(pos);
+            if (!(state.getBlock() instanceof AbstractRoostBlock)) {
+                return;
+            }
+            if (!(level.getBlockEntity(pos) instanceof RoostBlockEntity roost)) {
+                return;
+            }
+
+            FlowFieldSolution solution = roost.getFlowFieldSolution();
+            BlockPos immutablePos = pos.immutable();
+            if (solution != null && !solution.isFailed()) {
+                withFlowField.add(immutablePos);
+            } else {
+                withoutFlowField.add(immutablePos);
+            }
+        });
+
+        int total = withFlowField.size() + withoutFlowField.size();
+        if (total == 0) {
+            context.getSource().sendSuccess(
+                () -> Component.literal("No roosts found within " + radius + " blocks"),
+                false);
+            return 0;
+        }
+
+        NetworkHandler.sendToPlayer(player, new RoostStatusPacket(withFlowField, withoutFlowField));
+        int okCount = withFlowField.size();
+        int missingCount = withoutFlowField.size();
+        context.getSource().sendSuccess(
+            () -> Component.literal("Found " + total + " roosts: " + okCount + " with flow fields (green), "
+                + missingCount + " without (red)"),
             false);
         return 1;
     }
