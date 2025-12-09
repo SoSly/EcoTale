@@ -6,13 +6,11 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -31,7 +29,6 @@ public class RoostBlockEntity extends BlockEntity {
     private static final int VALIDATION_INTERVAL = 500;
     private static final int BASE_RETRY_DELAY = 500;
     private static final int MAX_RETRY_DELAY = 6000;
-    private static final int BAT_SEARCH_RADIUS = 2;
 
     private FlowFieldSolution flowFieldSolution;
     private FlowFieldSolution candidateSolution;
@@ -223,31 +220,6 @@ public class RoostBlockEntity extends BlockEntity {
         int delay = Math.min(BASE_RETRY_DELAY * (1 << (failureCount - 1)), MAX_RETRY_DELAY);
         nextRetryTick = level.getGameTime() + delay;
         setChanged();
-
-        killTrappedBats(level);
-    }
-
-    private void killTrappedBats(Level level) {
-        if (!(level instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        BlockPos roostPos = getBlockPos();
-        AABB searchArea = new AABB(roostPos).inflate(BAT_SEARCH_RADIUS);
-
-        for (EcoTaleBat bat : serverLevel.getEntitiesOfClass(EcoTaleBat.class, searchArea)) {
-            GlobalPos home = bat.getBrain().getMemory(MemoryModuleType.HOME).orElse(null);
-            if (home == null) {
-                continue;
-            }
-            if (!home.dimension().equals(serverLevel.dimension())) {
-                continue;
-            }
-            if (!home.pos().equals(roostPos)) {
-                continue;
-            }
-            bat.discard();
-        }
     }
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {
