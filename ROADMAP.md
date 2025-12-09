@@ -10,12 +10,19 @@ Establish bat colonies as functional ecosystem actors. Players discover colonies
 - [x] Guano blocks exist with layers similar to snow blocks
 - [x] Roost blocks exist for every stone type (shaped recipe: stone + 8 guano)
 - [x] Roosts are generated during worldgen; guano is generated below them
-- [ ] Bat AI overhaul
+- [x] Bat AI overhaul
   - [x] EcoTaleBat entity with Brain system (extends vanilla Bat for instanceof compatibility)
   - [x] Memory and sensor registration (home roost, colony state)
-  - [ ] FlyingPathNavigation for cave navigation
   - [x] Daily cycle behaviors (rest at roost during day, forage at night, return at dawn)
-- [ ] Roost colony management
+- [x] Flow field navigation system
+  - [x] Data structures (FlowFieldCell, FlowFieldSolution, FlowFieldManager)
+  - [x] Debug visualization and commands (`/ecotale flowfield`)
+  - [x] Flood fill generation algorithm with exit detection
+  - [x] Validation and regeneration (path re-trace, backoff on failure)
+  - [x] Threaded generation with queue system
+  - [x] Solution sharing between nearby roosts
+  - [x] Brain integration (ExitCave, ReturnToRoost behaviors)
+- [x] Roost colony management
   - [x] Suppress vanilla bat spawns; roosts are the only bat source
   - [x] RoostBlockEntity spawns and tracks colony (1-4 bats)
   - [x] Bats query home roost for state; homeless bats despawn
