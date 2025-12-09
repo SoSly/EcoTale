@@ -25,7 +25,7 @@ None yet. This mod is in early development.
 
 ## Development
 
-Track what's coming in the [roadmap](ROADMAP.md) or see what's changed in the [changelog](CHANGELOG.md).
+Read the [design philosophy](docs/EcoTale.md), track what's coming in the [roadmap](ROADMAP.md), or see what's changed in the [changelog](CHANGELOG.md).
 
 ## License
 
