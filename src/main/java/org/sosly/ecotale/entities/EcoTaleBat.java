@@ -18,33 +18,40 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import org.jetbrains.annotations.NotNull;
+import org.sosly.ecotale.api.IFlyingMob;
+import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.ai.Activities;
 import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
 import org.sosly.ecotale.entities.ai.Schedules;
 import org.sosly.ecotale.entities.ai.SensorTypes;
+import org.sosly.ecotale.entities.ai.behavior.FlyingRandomStroll;
 import org.sosly.ecotale.entities.ai.behavior.bat.DespawnIfHomeless;
 import org.sosly.ecotale.entities.ai.behavior.bat.DropGuano;
+import org.sosly.ecotale.entities.ai.behavior.bat.ExitCave;
 import org.sosly.ecotale.entities.ai.behavior.bat.RestAtRoost;
 import org.sosly.ecotale.entities.ai.behavior.bat.ReturnToRoost;
+import org.sosly.ecotale.entities.ai.behavior.bat.WakeForForaging;
 import org.sosly.ecotale.entities.ai.behavior.bat.WakeIfRoostDistant;
+import org.sosly.ecotale.navigation.FlowFieldSolution;
 
-public class EcoTaleBat extends Bat {
+public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
             MemoryModuleType.HOME,
             MemoryModuleType.PATH,
             MemoryModuleType.LOOK_TARGET,
-            MemoryModuleTypes.FLY_TARGET.get()
+            MemoryModuleTypes.FLY_TARGET.get(),
+            MemoryModuleTypes.IS_OUTSIDE.get()
     );
     private static final ImmutableList<SensorType<? extends Sensor<? super EcoTaleBat>>> SENSOR_TYPES =
-            ImmutableList.of(SensorTypes.HOME.get());
+            ImmutableList.of(SensorTypes.HOME.get(), SensorTypes.SKY.get());
 
     public EcoTaleBat(EntityType<? extends Bat> entityType, Level level) {
         super(entityType, level);
@@ -63,7 +70,7 @@ public class EcoTaleBat extends Bat {
     }
 
     @Override
-    protected @NotNull PathNavigation createNavigation(@NotNull Level level) {
+    protected @NotNull FlyingPathNavigation createNavigation(@NotNull Level level) {
         FlyingPathNavigation nav = new FlyingPathNavigation(this, level);
         nav.setCanOpenDoors(false);
         nav.setCanFloat(false);
@@ -95,7 +102,11 @@ public class EcoTaleBat extends Bat {
                 Pair.of(3, new ReturnToRoost())
         ));
 
-        brain.addActivity(Activities.FORAGE.get(), ImmutableList.of());
+        brain.addActivity(Activities.FORAGE.get(), ImmutableList.of(
+                Pair.of(0, new ExitCave()),
+                Pair.of(1, new FlyingRandomStroll<EcoTaleBat>()),
+                Pair.of(2, new WakeForForaging())
+        ));
 
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
         brain.setSchedule(Schedules.BAT_DEFAULT.get());
@@ -125,6 +136,9 @@ public class EcoTaleBat extends Bat {
             tag.putString("HomeDimension", globalPos.dimension().location().toString());
             tag.putLong("HomePos", globalPos.pos().asLong());
         });
+        this.getBrain().getMemory(MemoryModuleTypes.IS_OUTSIDE.get()).ifPresent(isOutside -> {
+            tag.putBoolean("IsOutside", isOutside);
+        });
     }
 
     @Override
@@ -138,10 +152,44 @@ public class EcoTaleBat extends Bat {
             BlockPos pos = BlockPos.of(tag.getLong("HomePos"));
             this.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(dimension, pos));
         }
+        if (tag.contains("IsOutside")) {
+            this.getBrain().setMemory(MemoryModuleTypes.IS_OUTSIDE.get(), tag.getBoolean("IsOutside"));
+        }
     }
 
     public void setHome(GlobalPos pos) {
         this.getBrain().setMemory(MemoryModuleType.HOME, pos);
+    }
+
+    @Override
+    public BlockPos getAnchorPoint() {
+        GlobalPos home = this.getBrain()
+                .getMemory(MemoryModuleType.HOME)
+                .orElse(null);
+        if (home == null) {
+            return null;
+        }
+        if (!home.dimension().equals(this.level().dimension())) {
+            return home.pos();
+        }
+
+        BlockEntity blockEntity = this.level().getBlockEntity(home.pos());
+        if (!(blockEntity instanceof RoostBlockEntity roost)) {
+            return home.pos();
+        }
+
+        FlowFieldSolution solution = roost.getFlowFieldSolution();
+        if (solution == null || solution.isFailed()) {
+            return home.pos();
+        }
+
+        BlockPos exitPoint = solution.getExitPoint();
+        return exitPoint != null ? exitPoint : home.pos();
+    }
+
+    @Override
+    public double getMaxWanderDistance() {
+        return 64.0;
     }
 
     @Override
