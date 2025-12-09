@@ -201,16 +201,14 @@ public class FlowFieldManager {
         FlowFieldSolution solution = generator.generate();
 
         long elapsed = System.nanoTime() - startTime;
-        double pathMs = generator.getPathTimeMs();
 
         if (solution.isFailed()) {
-            LOGGER.debug("FlowField generation FAILED at {}: {}ms (path: {}ms)",
-                    request.roostPos(), elapsed / 1_000_000.0, pathMs);
+            LOGGER.debug("FlowField generation FAILED at {}: {}ms",
+                    request.roostPos(), elapsed / 1_000_000.0);
         } else {
-            LOGGER.debug("FlowField generation at {}: {}ms (path: {}ms), {} outward cells, {} inward cells, exit at {}",
+            LOGGER.debug("FlowField generation at {}: {}ms, {} outward cells, {} inward cells, exit at {}",
                     request.roostPos(),
                     elapsed / 1_000_000.0,
-                    pathMs,
                     solution.getOutwardCellCount(),
                     solution.getInwardCellCount(),
                     solution.getExitPoint());
