@@ -28,7 +28,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 import org.slf4j.Logger;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IWorldgenGenerating;
+import org.sosly.ecotale.api.generators.IWorldgenGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.blocks.GuanoLayerBlock;
 import org.sosly.ecotale.blocks.RoostBlockEntity;

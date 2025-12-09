@@ -6,7 +6,7 @@ import net.minecraftforge.client.model.generators.BlockStateProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.RegistryObject;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IBlockStateGenerating;
+import org.sosly.ecotale.api.generators.IBlockStateGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 
 public class ModBlockStateProvider extends BlockStateProvider {

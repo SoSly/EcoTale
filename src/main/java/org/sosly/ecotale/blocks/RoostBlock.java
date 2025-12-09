@@ -22,10 +22,10 @@ import net.minecraftforge.client.model.generators.BlockStateProvider;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IBlockStateGenerating;
-import org.sosly.ecotale.api.IItemModelGenerating;
-import org.sosly.ecotale.api.ILootTableGenerating;
-import org.sosly.ecotale.api.IRecipeGenerating;
+import org.sosly.ecotale.api.generators.IBlockStateGenerating;
+import org.sosly.ecotale.api.generators.IItemModelGenerating;
+import org.sosly.ecotale.api.generators.ILootTableGenerating;
+import org.sosly.ecotale.api.generators.IRecipeGenerating;
 import org.sosly.ecotale.items.ItemRegistry;
 
 import java.util.function.BiConsumer;

@@ -1,4 +1,4 @@
-package org.sosly.ecotale.api;
+package org.sosly.ecotale.api.generators;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.loot.LootTable;

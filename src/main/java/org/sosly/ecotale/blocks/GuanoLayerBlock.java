@@ -29,8 +29,8 @@ import net.minecraftforge.client.model.generators.BlockStateProvider;
 import net.minecraftforge.client.model.generators.ConfiguredModel;
 import net.minecraftforge.client.model.generators.ModelFile;
 import net.minecraftforge.registries.ForgeRegistries;
-import org.sosly.ecotale.api.IBlockStateGenerating;
-import org.sosly.ecotale.api.ILootTableGenerating;
+import org.sosly.ecotale.api.generators.IBlockStateGenerating;
+import org.sosly.ecotale.api.generators.ILootTableGenerating;
 import org.sosly.ecotale.items.ItemRegistry;
 
 import java.util.function.BiConsumer;

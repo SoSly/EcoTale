@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IRecipeGenerating;
+import org.sosly.ecotale.api.generators.IRecipeGenerating;
 
 import java.util.function.Consumer;
 

@@ -27,7 +27,7 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, EcoTaleBat bat) {
-        if (bat.isResting()) {
+        if (bat.isSleeping()) {
             return false;
         }
 
@@ -46,7 +46,7 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean canStillUse(ServerLevel level, EcoTaleBat bat, long gameTime) {
-        if (bat.isResting()) {
+        if (bat.isSleeping()) {
             return false;
         }
 

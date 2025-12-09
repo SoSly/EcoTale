@@ -12,7 +12,7 @@ public class WakeForForaging extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, EcoTaleBat bat) {
-        return bat.isResting();
+        return bat.isSleeping();
     }
 
     @Override

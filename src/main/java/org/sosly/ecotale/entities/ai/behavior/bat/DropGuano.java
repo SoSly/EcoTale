@@ -21,12 +21,12 @@ public class DropGuano extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, EcoTaleBat bat) {
-        return bat.isResting();
+        return bat.isSleeping();
     }
 
     @Override
     protected boolean canStillUse(ServerLevel level, EcoTaleBat bat, long gameTime) {
-        return bat.isResting();
+        return bat.isSleeping();
     }
 
     @Override

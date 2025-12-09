@@ -8,7 +8,7 @@ import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.RegistryObject;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IItemModelGenerating;
+import org.sosly.ecotale.api.generators.IItemModelGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.items.ItemRegistry;
 

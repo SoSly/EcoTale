@@ -1,4 +1,4 @@
-package org.sosly.ecotale.api;
+package org.sosly.ecotale.api.generators;
 
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 

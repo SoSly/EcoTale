@@ -8,7 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.sosly.ecotale.api.IFlyingMob;
+import org.sosly.ecotale.api.entities.IFlyingMob;
 
 import javax.annotation.Nullable;
 

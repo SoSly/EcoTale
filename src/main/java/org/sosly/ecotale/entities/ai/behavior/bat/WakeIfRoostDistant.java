@@ -18,7 +18,7 @@ public class WakeIfRoostDistant extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, EcoTaleBat bat) {
-        if (!bat.isResting()) {
+        if (!bat.isSleeping()) {
             return false;
         }
 

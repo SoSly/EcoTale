@@ -1,4 +1,4 @@
-package org.sosly.ecotale.api;
+package org.sosly.ecotale.api.generators;
 
 import net.minecraft.data.worldgen.BootstapContext;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;

@@ -1,4 +1,4 @@
-package org.sosly.ecotale.api;
+package org.sosly.ecotale.api.generators;
 
 import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeProvider;

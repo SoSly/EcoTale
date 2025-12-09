@@ -6,7 +6,7 @@ import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.RegistryObject;
-import org.sosly.ecotale.api.IRecipeGenerating;
+import org.sosly.ecotale.api.generators.IRecipeGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 import org.sosly.ecotale.items.ItemRegistry;
 

@@ -26,7 +26,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import org.jetbrains.annotations.NotNull;
-import org.sosly.ecotale.api.IFlyingMob;
+import org.sosly.ecotale.api.entities.IFlyingMob;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.ai.Activities;
 import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
@@ -118,6 +118,11 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     @SuppressWarnings("unchecked")
     public @NotNull Brain<EcoTaleBat> getBrain() {
         return (Brain<EcoTaleBat>) super.getBrain();
+    }
+
+    @Override
+    public boolean isSleeping() {
+        return this.isResting();
     }
 
     @Override

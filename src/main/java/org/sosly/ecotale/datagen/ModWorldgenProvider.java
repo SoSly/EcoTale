@@ -11,7 +11,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraftforge.common.data.DatapackBuiltinEntriesProvider;
 import net.minecraftforge.registries.RegistryObject;
 import org.sosly.ecotale.EcoTale;
-import org.sosly.ecotale.api.IWorldgenGenerating;
+import org.sosly.ecotale.api.generators.IWorldgenGenerating;
 import org.sosly.ecotale.worldgen.FeatureRegistry;
 
 import java.util.Set;

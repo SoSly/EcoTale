@@ -7,7 +7,7 @@ import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraftforge.registries.RegistryObject;
-import org.sosly.ecotale.api.ILootTableGenerating;
+import org.sosly.ecotale.api.generators.ILootTableGenerating;
 import org.sosly.ecotale.blocks.BlockRegistry;
 
 import java.util.List;

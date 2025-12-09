@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.phys.Vec3;
-import org.sosly.ecotale.api.IFlyingMob;
+import org.sosly.ecotale.api.entities.IFlyingMob;
 import org.sosly.ecotale.entities.ai.util.FlyingMobRandomPos;
 
 public class FlyingRandomStroll<T extends Mob & IFlyingMob<T>> extends Behavior<T> {
@@ -22,7 +22,7 @@ public class FlyingRandomStroll<T extends Mob & IFlyingMob<T>> extends Behavior<
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, T mob) {
-        if (mob.isResting()) {
+        if (mob.isSleeping()) {
             return false;
         }
         if (mob.getNavigation().isInProgress()) {

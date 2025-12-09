@@ -18,7 +18,7 @@ public class RestAtRoost extends Behavior<EcoTaleBat> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, EcoTaleBat bat) {
-        if (bat.isResting()) {
+        if (bat.isSleeping()) {
             return false;
         }
 
@@ -39,7 +39,7 @@ public class RestAtRoost extends Behavior<EcoTaleBat> {
         bat.moveTo(hangPos.getX() + 0.5 + offsetX, hangPos.getY() + 0.5, hangPos.getZ() + 0.5 + offsetZ);
         bat.getNavigation().stop();
 
-        if (!bat.isResting()) {
+        if (!bat.isSleeping()) {
             bat.setResting(true);
         }
     }

@@ -29,7 +29,7 @@ public class ExitCave extends Behavior<EcoTaleBat> {
         if (bat.getBrain().getMemory(MemoryModuleTypes.IS_OUTSIDE.get()).orElse(false)) {
             return false;
         }
-        if (bat.isResting()) {
+        if (bat.isSleeping()) {
             return false;
         }
         if (bat.getNavigation().isInProgress()) {
@@ -49,7 +49,7 @@ public class ExitCave extends Behavior<EcoTaleBat> {
         if (bat.getBrain().getMemory(MemoryModuleTypes.IS_OUTSIDE.get()).orElse(false)) {
             return false;
         }
-        if (bat.isResting()) {
+        if (bat.isSleeping()) {
             return false;
         }
 
