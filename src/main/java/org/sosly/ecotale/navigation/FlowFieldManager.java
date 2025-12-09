@@ -210,7 +210,7 @@ public class FlowFieldManager {
         );
         priorityWorker.submit(() -> {
             try {
-                processRequest(request);
+                processPriorityRequest(request);
             } catch (Exception e) {
                 LOGGER.error("Error processing priority flow field generation at {}", roostPos, e);
             }
@@ -218,12 +218,38 @@ public class FlowFieldManager {
     }
 
     private void processRequest(FlowFieldRequest request) {
+        waitWhilePaused();
+        if (!running) {
+            return;
+        }
+        executeRequest(request);
+    }
+
+    private void processPriorityRequest(FlowFieldRequest request) {
+        if (!running) {
+            return;
+        }
+        executeRequest(request);
+    }
+
+    private void executeRequest(FlowFieldRequest request) {
         long startTime = System.nanoTime();
 
         if (request.type() == FlowFieldRequest.RequestType.GENERATE) {
             processGeneration(request, startTime);
         } else {
             processValidation(request, startTime);
+        }
+    }
+
+    private void waitWhilePaused() {
+        while (paused && running) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
     }
 
