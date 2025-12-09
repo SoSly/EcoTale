@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
+import org.sosly.ecotale.Constants;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.navigation.FlowFieldCell;
@@ -20,6 +21,7 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
     private static final int CLOSE_ENOUGH = 4;
 
     private FlowFieldCell lastCell;
+    private long lastNavTick;
 
     public ReturnToRoost() {
         super(ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_PRESENT), 1, 200);
@@ -62,16 +64,21 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
     @Override
     protected void start(ServerLevel level, EcoTaleBat bat, long gameTime) {
         lastCell = null;
+        lastNavTick = 0;
     }
 
     @Override
     protected void tick(ServerLevel level, EcoTaleBat bat, long gameTime) {
-        if (bat.getNavigation().isInProgress()) {
-            FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
-            if (currentCell.equals(lastCell)) {
-                return;
-            }
+        if (gameTime - lastNavTick < Constants.NAV_INTERVAL_TICKS) {
+            return;
         }
+        lastNavTick = gameTime;
+
+        FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
+        if (currentCell.equals(lastCell) && bat.getNavigation().isInProgress()) {
+            return;
+        }
+        lastCell = currentCell;
 
         GlobalPos home = bat.getBrain().getMemory(MemoryModuleType.HOME).orElse(null);
         if (home == null) {
@@ -91,8 +98,6 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
             return;
         }
 
-        FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
-        lastCell = currentCell;
         Optional<Vec3> direction = solution.getInwardDirection(currentCell);
 
         if (direction.isPresent()) {
@@ -103,13 +108,14 @@ public class ReturnToRoost extends Behavior<EcoTaleBat> {
             } else {
                 navigateDirectlyToward(bat, Vec3.atCenterOf(roostPos.below()));
             }
+            return;
+        }
+
+        BlockPos exitPoint = solution.getExitPoint();
+        if (exitPoint != null && level.canSeeSky(bat.blockPosition())) {
+            navigateDirectlyToward(bat, Vec3.atCenterOf(exitPoint));
         } else {
-            BlockPos exitPoint = solution.getExitPoint();
-            if (exitPoint != null) {
-                navigateDirectlyToward(bat, Vec3.atCenterOf(exitPoint));
-            } else {
-                navigateDirectlyToward(bat, Vec3.atCenterOf(roostPos.below()));
-            }
+            navigateDirectlyToward(bat, Vec3.atCenterOf(roostPos.below()));
         }
     }
 

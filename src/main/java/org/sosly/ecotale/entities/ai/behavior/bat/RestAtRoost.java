@@ -10,7 +10,7 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import org.sosly.ecotale.entities.EcoTaleBat;
 
 public class RestAtRoost extends Behavior<EcoTaleBat> {
-    private static final int START_DISTANCE = 2;
+    private static final int START_DISTANCE = 4;
     private static final int FINAL_DISTANCE = 1;
 
     private BlockPos hangPos;

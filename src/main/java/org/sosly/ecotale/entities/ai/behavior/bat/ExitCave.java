@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
+import org.sosly.ecotale.Constants;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
@@ -19,6 +20,7 @@ import java.util.Optional;
 
 public class ExitCave extends Behavior<EcoTaleBat> {
     private FlowFieldCell lastCell;
+    private long lastNavTick;
 
     public ExitCave() {
         super(ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_PRESENT), 1, 200);
@@ -60,16 +62,21 @@ public class ExitCave extends Behavior<EcoTaleBat> {
     @Override
     protected void start(ServerLevel level, EcoTaleBat bat, long gameTime) {
         lastCell = null;
+        lastNavTick = 0;
     }
 
     @Override
     protected void tick(ServerLevel level, EcoTaleBat bat, long gameTime) {
-        if (bat.getNavigation().isInProgress()) {
-            FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
-            if (currentCell.equals(lastCell)) {
-                return;
-            }
+        if (gameTime - lastNavTick < Constants.NAV_INTERVAL_TICKS) {
+            return;
         }
+        lastNavTick = gameTime;
+
+        FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
+        if (currentCell.equals(lastCell) && bat.getNavigation().isInProgress()) {
+            return;
+        }
+        lastCell = currentCell;
 
         GlobalPos home = bat.getBrain().getMemory(MemoryModuleType.HOME).orElse(null);
         if (home == null) {
@@ -88,9 +95,6 @@ public class ExitCave extends Behavior<EcoTaleBat> {
         }
 
         BlockPos exitPoint = solution.getExitPoint();
-
-        FlowFieldCell currentCell = FlowFieldCell.fromBlockPos(bat.blockPosition());
-        lastCell = currentCell;
         Optional<Vec3> direction = solution.getOutwardDirection(currentCell);
 
         if (direction.isPresent()) {

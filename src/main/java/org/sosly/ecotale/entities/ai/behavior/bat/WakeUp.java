@@ -5,8 +5,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import org.sosly.ecotale.entities.EcoTaleBat;
 
-public class WakeForForaging extends Behavior<EcoTaleBat> {
-    public WakeForForaging() {
+public class WakeUp extends Behavior<EcoTaleBat> {
+    public WakeUp() {
         super(ImmutableMap.of());
     }
 

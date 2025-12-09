@@ -38,7 +38,7 @@ import org.sosly.ecotale.entities.ai.behavior.bat.DropGuano;
 import org.sosly.ecotale.entities.ai.behavior.bat.ExitCave;
 import org.sosly.ecotale.entities.ai.behavior.bat.RestAtRoost;
 import org.sosly.ecotale.entities.ai.behavior.bat.ReturnToRoost;
-import org.sosly.ecotale.entities.ai.behavior.bat.WakeForForaging;
+import org.sosly.ecotale.entities.ai.behavior.bat.WakeUp;
 import org.sosly.ecotale.entities.ai.behavior.bat.WakeIfRoostDistant;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 
@@ -99,13 +99,14 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
                 Pair.of(0, new WakeIfRoostDistant()),
                 Pair.of(1, new RestAtRoost()),
                 Pair.of(2, new DropGuano()),
-                Pair.of(3, new ReturnToRoost())
+                Pair.of(3, new ReturnToRoost()),
+                Pair.of(4, new FlyingRandomStroll<>())
         ));
 
         brain.addActivity(Activities.FORAGE.get(), ImmutableList.of(
                 Pair.of(0, new ExitCave()),
-                Pair.of(1, new FlyingRandomStroll<EcoTaleBat>()),
-                Pair.of(2, new WakeForForaging())
+                Pair.of(1, new FlyingRandomStroll<>()),
+                Pair.of(2, new WakeUp())
         ));
 
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
@@ -132,6 +133,10 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
 
     @Override
     protected void customServerAiStep() {
+        if (this.isSleeping() && this.getNavigation().isInProgress()) {
+            this.getNavigation().stop();
+        }
+
         ServerLevel level = (ServerLevel) this.level();
         this.level().getProfiler().push("ecoTaleBatBrain");
         this.getBrain().tick(level, this);
