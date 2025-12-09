@@ -77,9 +77,6 @@ public class FlowFieldGenerator {
         }
 
         Set<FlowFieldCell> pathCells = tracePathToExit(exitCell);
-        if (!validatePathConnectivity(exitCell)) {
-            return FlowFieldSolution.failed(roostPos);
-        }
 
         Map<FlowFieldCell, Vec3> inwardField = buildInwardField(pathCells, exitPoint);
         BlockPos elevatedExit = extendInwardFieldOutside(inwardField, exitCell, exitPoint);
@@ -124,42 +121,6 @@ public class FlowFieldGenerator {
         }
 
         return pathCells;
-    }
-
-    private boolean validatePathConnectivity(FlowFieldCell exitCell) {
-        Vec3 current = Vec3.atCenterOf(roostPos.below());
-
-        FlowFieldCell cell = actualStartCell;
-        while (cell != null) {
-            BlockPos hub = hubCache.get(cell);
-            if (hub == null) {
-                return false;
-            }
-
-            Vec3 hubVec = Vec3.atCenterOf(hub);
-            if (!raycastClear(current, hubVec)) {
-                return false;
-            }
-
-            current = hubVec;
-            cell = getNextCellOnPath(cell, exitCell);
-        }
-
-        return true;
-    }
-
-    private FlowFieldCell getNextCellOnPath(FlowFieldCell current, FlowFieldCell exitCell) {
-        if (current.equals(exitCell)) {
-            return null;
-        }
-
-        for (Map.Entry<FlowFieldCell, FlowFieldCell> entry : cameFrom.entrySet()) {
-            if (entry.getValue().equals(current)) {
-                return entry.getKey();
-            }
-        }
-
-        return null;
     }
 
     private FlowFieldCell findReachableStartCell() {
