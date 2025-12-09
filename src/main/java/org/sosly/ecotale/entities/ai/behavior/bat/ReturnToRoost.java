@@ -17,7 +17,7 @@ import org.sosly.ecotale.navigation.FlowFieldSolution;
 import java.util.Optional;
 
 public class ReturnToRoost extends Behavior<EcoTaleBat> {
-    private static final int CLOSE_ENOUGH = 1;
+    private static final int CLOSE_ENOUGH = 4;
 
     private FlowFieldCell lastCell;
 

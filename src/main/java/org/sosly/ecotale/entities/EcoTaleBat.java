@@ -65,8 +65,8 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     public static AttributeSupplier.Builder createAttributes() {
         return Bat.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 6.0D)
-                .add(Attributes.FLYING_SPEED, 0.6D)
-                .add(Attributes.MOVEMENT_SPEED, 0.3D);
+                .add(Attributes.FLYING_SPEED, 0.2D)
+                .add(Attributes.MOVEMENT_SPEED, 0.2D);
     }
 
     @Override
@@ -123,6 +123,11 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     @Override
     public boolean isSleeping() {
         return this.isResting();
+    }
+
+    @Override
+    protected float getFlyingSpeed() {
+        return this.getSpeed();
     }
 
     @Override
