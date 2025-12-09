@@ -1,8 +1,11 @@
 package org.sosly.ecotale.entities.ai.behavior.bat;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -20,9 +23,16 @@ import org.sosly.ecotale.utils.TestUtils;
 @GameTestHolder(EcoTale.MOD_ID)
 public class ReturnToRoostGameTest {
     private static final int SPAWN_DISTANCE = 15;
-    private static final int CLOSE_ENOUGH = 1;
+    private static final int BAT_COUNT = 4;
 
-    @GameTest(template = "bat_roost", timeoutTicks = 2400)
+    private static final BlockPos[] SPAWN_OFFSETS = {
+        new BlockPos(SPAWN_DISTANCE, 0, 0),
+        new BlockPos(-SPAWN_DISTANCE, 0, 0),
+        new BlockPos(0, 0, SPAWN_DISTANCE),
+        new BlockPos(0, 0, -SPAWN_DISTANCE)
+    };
+
+    @GameTest(template = "bat_roost", timeoutTicks = 500)
     public void batReturnsToRoostFromOutside(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
 
@@ -42,52 +52,52 @@ public class ReturnToRoostGameTest {
         roost.setFlowFieldSolution(null);
         FlowFieldManager.getInstance().requestGeneration(roost);
 
-        waitForFlowFieldThenSpawnBat(helper, level, roost, absoluteRoost, 0);
+        List<EcoTaleBat> bats = new ArrayList<>();
+
+        helper.succeedWhen(() -> {
+            hasValidSolution(roost);
+
+            if (bats.isEmpty()) {
+                for (int i = 0; i < BAT_COUNT; i++) {
+                    EcoTaleBat bat = EntityRegistry.BAT.get().create(level);
+                    if (bat == null) {
+                        throw new GameTestAssertException("Failed to create bat " + i);
+                    }
+                    BlockPos spawnPos = absoluteRoost.offset(SPAWN_OFFSETS[i]);
+                    bat.moveTo(spawnPos.getX() + 0.5, spawnPos.getY() + 0.5, spawnPos.getZ() + 0.5, 0, 0);
+                    bat.setHome(GlobalPos.of(level.dimension(), absoluteRoost));
+                    bat.setResting(false);
+                    level.addFreshEntity(bat);
+                    bats.add(bat);
+                }
+                throw new GameTestAssertException("Bats spawned, waiting for them to roost");
+            }
+
+            for (int i = 0; i < bats.size(); i++) {
+                isResting(absoluteRoost, bats.get(i), i);
+            }
+        });
     }
 
-    private void waitForFlowFieldThenSpawnBat(
-            GameTestHelper helper,
-            ServerLevel level,
-            RoostBlockEntity roost,
-            BlockPos absoluteRoost,
-            int attempts
-    ) {
-        if (attempts > 100) {
-            helper.fail("Flow field generation timed out after 100 ticks");
-            return;
-        }
-
+    private void hasValidSolution(RoostBlockEntity roost) {
         FlowFieldSolution solution = roost.getFlowFieldSolution();
+
         if (solution == null) {
-            helper.runAfterDelay(1, () -> waitForFlowFieldThenSpawnBat(helper, level, roost, absoluteRoost, attempts + 1));
-            return;
+            throw new GameTestAssertException("Solution not yet computed");
         }
 
         if (solution.isFailed()) {
-            helper.fail("Flow field generation failed - no valid exit path found");
-            return;
+            throw new GameTestAssertException("Solution generation failed");
+        }
+    }
+
+    private void isResting(BlockPos roost, EcoTaleBat bat, int index) {
+        if (!bat.blockPosition().closerThan(roost, 2)) {
+            throw new GameTestAssertException("Bat " + index + " is not at roosting position");
         }
 
-        EcoTaleBat bat = EntityRegistry.BAT.get().create(level);
-        if (bat == null) {
-            helper.fail("Failed to create bat");
-            return;
+        if (!bat.isResting()) {
+            throw new GameTestAssertException("Bat " + index + " is not resting at roosting position");
         }
-
-        BlockPos spawnPos = absoluteRoost.offset(0, 0, SPAWN_DISTANCE);
-        bat.moveTo(spawnPos.getX() + 0.5, spawnPos.getY() + 0.5, spawnPos.getZ() + 0.5, 0, 0);
-        bat.setHome(GlobalPos.of(level.dimension(), absoluteRoost));
-        bat.setResting(false);
-        level.addFreshEntity(bat);
-
-        helper.runAfterDelay(450, () -> {
-            BlockPos hangPos = absoluteRoost.below();
-            if (bat.blockPosition().closerThan(hangPos, CLOSE_ENOUGH)) {
-                helper.succeed();
-            } else {
-                double distance = Math.sqrt(bat.blockPosition().distSqr(hangPos));
-                helper.fail("Bat did not return to roost. Distance: " + String.format("%.1f", distance) + " blocks");
-            }
-        });
     }
 }
