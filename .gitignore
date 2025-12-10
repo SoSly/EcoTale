@@ -9,6 +9,10 @@
 .claude
 CLAUDE.md
 
+# Obsidian editor state
+docs/.obsidian/workspace.json
+docs/.obsidian/vault-stats.json
+
 # IntelliJ
 out/
 .idea_modules/
