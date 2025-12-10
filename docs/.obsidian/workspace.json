@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "mobs/bats/Colony Health Architecture.md",
+                "file": "EcoTale.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Colony Health Architecture"
+              "title": "EcoTale"
             }
           }
         ]
@@ -68,7 +68,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 345.5
   },
   "right": {
     "id": "0475c884e784ffd3",
@@ -146,9 +146,10 @@
   "lastOpenFiles": [
     "mobs/bats/AI Behavior Architecture.md",
     "mobs/bats/Bats Feature Concept.md",
+    "mobs/bats/Colony Health Architecture.md",
+    "mobs/bats/Flow Field Specification.md",
     "mobs/bats/flow-field-implementation-plan.md",
     "mobs/bats/flow-field-navigation.md",
-    "mobs/bats/Colony Health Architecture.md",
     "EcoTale.md",
     "mobs/bats/bat-ai-design.md",
     "mobs/bats/pocs/Colony Size Performance.md",

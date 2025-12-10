@@ -26,8 +26,8 @@ public class RoostBlockEntity extends BlockEntity {
     private static final String TAG_FLOW_FIELD = "flowField";
     private static final String TAG_FAILURE_COUNT = "failureCount";
     private static final String TAG_NEXT_RETRY_TICK = "nextRetryTick";
-    private static final int VALIDATION_INTERVAL = 500;
-    private static final int BASE_RETRY_DELAY = 500;
+    private static final int VALIDATION_INTERVAL = 600;
+    private static final int BASE_RETRY_DELAY = 600;
     private static final int MAX_RETRY_DELAY = 6000;
 
     private FlowFieldSolution flowFieldSolution;
