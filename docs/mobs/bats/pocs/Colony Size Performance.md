@@ -1,7 +1,7 @@
 ---
 type: poc
-validates: "[[Colony Health]]"
-assumption: "A single large colony is more performant than multiple small colonies with equivalent total bats"
+validates: "[[Colony Health Architecture]]"
+assumption: A single large colony is more performant than multiple small colonies with equivalent total bats
 status: pending
 ---
 

@@ -1,7 +1,7 @@
 ---
 level: 3
-parent: "[[Bats]]"
-status: draft
+parent: "[[Bats Feature Concept]]"
+status: review
 ---
 
 The Colony Health system manages bat population and stress for a single roost. It serves the Bats feature concept by providing the autonomous ecology that players observe and respond to.

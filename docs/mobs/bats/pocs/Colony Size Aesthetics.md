@@ -1,7 +1,7 @@
 ---
 type: poc
-validates: "[[Colony Health]]"
-assumption: "Large colonies can distribute bats spatially while maintaining functional navigation and natural-looking behavior"
+validates: "[[Colony Health Architecture]]"
+assumption: Large colonies can distribute bats spatially while maintaining functional navigation and natural-looking behavior
 status: pending
 ---
 

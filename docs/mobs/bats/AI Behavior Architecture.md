@@ -1,6 +1,6 @@
 ---
 level: 3
-parent: "[[Bats]]"
+parent: "[[Bats Feature Concept]]"
 status: review
 ---
 
@@ -245,8 +245,6 @@ Bat dies (any cause)
     → if HOME is valid: notifies colony of death
     → colony removes bat from tracked set, increases stress
 ```
-
-**Open:** Notification mechanism (direct call vs Forge event) — see Open Questions.
 
 ## Key Decisions
 
