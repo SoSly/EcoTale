@@ -1,0 +1,41 @@
+{
+  "confirmDeletion": false,
+  "showAddCommand": false,
+  "debug": false,
+  "editorMenu": [],
+  "fileMenu": [],
+  "leftRibbon": [
+    {
+      "id": "obsidian-shellcommands:shell-command-jk8f661sxi",
+      "icon": "lucide-terminal",
+      "name": "Shell commands: Execute: start powershell",
+      "mode": "any"
+    }
+  ],
+  "rightRibbon": [],
+  "titleBar": [],
+  "statusBar": [],
+  "pageHeader": [],
+  "macros": [],
+  "explorer": [],
+  "hide": {
+    "statusbar": [
+      "obsidian-stille"
+    ],
+    "leftRibbon": [
+      "Shell commands: Custom variables",
+      "Open command palette"
+    ]
+  },
+  "spacing": "15",
+  "advancedToolbar": {
+    "rowHeight": 48,
+    "rowCount": 0,
+    "spacing": 0,
+    "buttonWidth": 48,
+    "columnLayout": false,
+    "mappedIcons": [],
+    "tooltips": false,
+    "heightOffset": 0
+  }
+}

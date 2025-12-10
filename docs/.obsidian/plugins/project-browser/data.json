@@ -1,0 +1,99 @@
+{
+  "onboardingNotices": {
+    "welcomeNoticeRead": true,
+    "lastVersionNoticeRead": "0.3.2"
+  },
+  "settingsVersion": "0.3.0",
+  "access": {
+    "replaceNewTab": true,
+    "enableRibbonIcon": false,
+    "enableCommand": false,
+    "launchFolder": "/"
+  },
+  "useAliases": true,
+  "showStateMenu": true,
+  "loopStatesWhenCycling": true,
+  "folders": {
+    "defaultView": "Small"
+  },
+  "states": {
+    "visible": [
+      {
+        "name": "Idea",
+        "link": true,
+        "defaultViewMode": "Small Cards",
+        "defaultViewOrder": "AliasOrFilename",
+        "defaultViewPriorityVisibility": true,
+        "defaultViewPriorityGrouping": true
+      },
+      {
+        "name": "Shortlisted",
+        "link": true,
+        "defaultViewMode": "Small Cards",
+        "defaultViewOrder": "AliasOrFilename",
+        "defaultViewPriorityVisibility": true,
+        "defaultViewPriorityGrouping": true
+      },
+      {
+        "name": "Drafting",
+        "link": true,
+        "defaultViewMode": "Detailed Cards",
+        "defaultViewOrder": "AliasOrFilename",
+        "defaultViewPriorityVisibility": true,
+        "defaultViewPriorityGrouping": true
+      },
+      {
+        "name": "Focus",
+        "link": true,
+        "defaultViewMode": "Simple Cards",
+        "defaultViewOrder": "AliasOrFilename",
+        "defaultViewPriorityVisibility": true,
+        "defaultViewPriorityGrouping": true
+      },
+      {
+        "name": "Final",
+        "link": true,
+        "defaultViewMode": "Small Cards",
+        "defaultViewOrder": "ModifiedDate",
+        "defaultViewPriorityVisibility": false,
+        "defaultViewPriorityGrouping": false
+      }
+    ],
+    "hidden": [
+      {
+        "name": "Archived",
+        "link": true,
+        "defaultViewMode": "Small Cards",
+        "defaultViewOrder": "ModifiedDate",
+        "defaultViewPriorityVisibility": false,
+        "defaultViewPriorityGrouping": false
+      },
+      {
+        "name": "Cancelled",
+        "link": true,
+        "defaultViewMode": "Detailed Cards",
+        "defaultViewOrder": "ModifiedDate",
+        "defaultViewPriorityVisibility": false,
+        "defaultViewPriorityGrouping": false
+      }
+    ]
+  },
+  "stateless": {
+    "name": "",
+    "defaultViewMode": "List",
+    "defaultViewOrder": "ModifiedDate",
+    "defaultViewPriorityVisibility": true,
+    "defaultViewPriorityGrouping": true
+  },
+  "defaultState": "Idea",
+  "priorities": [
+    {
+      "name": "High",
+      "link": false
+    },
+    {
+      "name": "Low",
+      "link": false
+    }
+  ]
+}

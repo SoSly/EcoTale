@@ -1,0 +1,12 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "tags": "tags",
+    "date": "date",
+    "domains": "multitext",
+    "titles": "multitext",
+    "portfolios": "multitext",
+    "created_at": "date"
+  }
+}
