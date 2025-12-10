@@ -78,8 +78,6 @@ HubEntry {
 
 On deserialization failure, treat as missing solution and regenerate.
 
-> **Implementation note:** The current implementation stores BlockPos as three separate integers. Update to use packed longs for efficiency.
-
 ### Navigation Hub
 
 Each cell in a flow field needs a specific position that bats can navigate through—not just "somewhere in this cell" but a concrete waypoint.

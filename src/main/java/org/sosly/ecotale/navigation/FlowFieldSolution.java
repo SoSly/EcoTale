@@ -36,9 +36,6 @@ public class FlowFieldSolution {
     private static final String TAG_VEC_X = "vx";
     private static final String TAG_VEC_Y = "vy";
     private static final String TAG_VEC_Z = "vz";
-    private static final String TAG_POS_X = "px";
-    private static final String TAG_POS_Y = "py";
-    private static final String TAG_POS_Z = "pz";
 
     private final Map<FlowFieldCell, Vec3> outwardField;
     private final Map<FlowFieldCell, Vec3> inwardField;
@@ -350,17 +347,13 @@ public class FlowFieldSolution {
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putBoolean(TAG_FAILED, failed);
-        tag.putInt(TAG_ROOST + "X", roostPos.getX());
-        tag.putInt(TAG_ROOST + "Y", roostPos.getY());
-        tag.putInt(TAG_ROOST + "Z", roostPos.getZ());
+        tag.putLong(TAG_ROOST, roostPos.asLong());
 
         if (failed) {
             return tag;
         }
 
-        tag.putInt(TAG_EXIT + "X", exitPoint.getX());
-        tag.putInt(TAG_EXIT + "Y", exitPoint.getY());
-        tag.putInt(TAG_EXIT + "Z", exitPoint.getZ());
+        tag.putLong(TAG_EXIT, exitPoint.asLong());
 
         tag.putInt(TAG_START + "X", startCell.x());
         tag.putInt(TAG_START + "Y", startCell.y());
@@ -377,21 +370,13 @@ public class FlowFieldSolution {
      * Deserializes a solution from NBT.
      */
     public static FlowFieldSolution load(CompoundTag tag) {
-        BlockPos roostPos = new BlockPos(
-            tag.getInt(TAG_ROOST + "X"),
-            tag.getInt(TAG_ROOST + "Y"),
-            tag.getInt(TAG_ROOST + "Z")
-        );
+        BlockPos roostPos = BlockPos.of(tag.getLong(TAG_ROOST));
 
         if (tag.getBoolean(TAG_FAILED)) {
             return failed(roostPos);
         }
 
-        BlockPos exitPoint = new BlockPos(
-            tag.getInt(TAG_EXIT + "X"),
-            tag.getInt(TAG_EXIT + "Y"),
-            tag.getInt(TAG_EXIT + "Z")
-        );
+        BlockPos exitPoint = BlockPos.of(tag.getLong(TAG_EXIT));
 
         FlowFieldCell startCell = new FlowFieldCell(
             tag.getInt(TAG_START + "X"),
@@ -451,9 +436,7 @@ public class FlowFieldSolution {
             entryTag.putInt(TAG_CELL_X, cell.x());
             entryTag.putInt(TAG_CELL_Y, cell.y());
             entryTag.putInt(TAG_CELL_Z, cell.z());
-            entryTag.putInt(TAG_POS_X, pos.getX());
-            entryTag.putInt(TAG_POS_Y, pos.getY());
-            entryTag.putInt(TAG_POS_Z, pos.getZ());
+            entryTag.putLong("pos", pos.asLong());
             list.add(entryTag);
         }
         return list;
@@ -468,11 +451,7 @@ public class FlowFieldSolution {
                 entryTag.getInt(TAG_CELL_Y),
                 entryTag.getInt(TAG_CELL_Z)
             );
-            BlockPos pos = new BlockPos(
-                entryTag.getInt(TAG_POS_X),
-                entryTag.getInt(TAG_POS_Y),
-                entryTag.getInt(TAG_POS_Z)
-            );
+            BlockPos pos = BlockPos.of(entryTag.getLong("pos"));
             cache.put(cell, pos);
         }
         return cache;
