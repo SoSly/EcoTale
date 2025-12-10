@@ -223,13 +223,18 @@ public class RoostBlockEntity extends BlockEntity {
     }
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {
-        ServerLevel serverLevel = level.getLevel();
-        BlockPos roostPos = this.getBlockPos();
-        GlobalPos home = GlobalPos.of(serverLevel.dimension(), roostPos);
         int count = random.nextIntBetweenInclusive(1, 4);
+        spawnColony(level.getLevel(), count);
+    }
+
+    public int spawnColony(ServerLevel level, int count) {
+        BlockPos roostPos = this.getBlockPos();
+        GlobalPos home = GlobalPos.of(level.dimension(), roostPos);
+        RandomSource random = level.getRandom();
+        int spawned = 0;
 
         for (int i = 0; i < count; i++) {
-            EcoTaleBat bat = EntityRegistry.BAT.get().create(serverLevel);
+            EcoTaleBat bat = EntityRegistry.BAT.get().create(level);
             if (bat == null) {
                 continue;
             }
@@ -242,7 +247,10 @@ public class RoostBlockEntity extends BlockEntity {
             bat.setResting(true);
             bat.setHome(home);
             level.addFreshEntity(bat);
+            spawned++;
         }
+
+        return spawned;
     }
 
     public void offerSolution(FlowFieldSolution solution) {
