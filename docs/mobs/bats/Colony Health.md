@@ -237,6 +237,4 @@ Colony health manifests as discrete observable states, with transitions driven b
 
 1. **Roost frequency vs. colony size** — Should worldgen place fewer large-capacity roosts or more small-capacity roosts? This affects performance control, visual clarity, and gameplay feel. Also determines whether colony spacing rules are needed — frequent small roosts naturally avoid overlap; infrequent large roosts may need enforced minimum distance. Needs POC investigation.
 
-2. **Threshold behaviors** — Which behaviors are continuous (scale with stress) vs. threshold-triggered (activate at specific stress levels)? Needs specification.
-
-3. **Chunk boundary handling** — What happens when bats cross chunk boundaries? When roost is loaded but bats are in unloaded chunks?
+2. **Stress exposure interface** — What does Colony Health expose to downstream systems—the raw stress value, the discrete state, or both? This affects whether consumers (Guano, Pollination, Bat AI) can implement continuous scaling or only threshold-triggered behavior.

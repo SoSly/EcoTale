@@ -1,3 +1,8 @@
+---
+level: 1
+status: stable
+---
+
 EcoTale transforms Minecraft's relationship with animals and crops from "resources to exploit" into "partners to steward." The most intuitive, humane actions should also be the most mechanically optimal actions.
 
 A world where nothing happens without player input is not a living world—it's a museum. Environmental actors should have autonomous behaviors that reward attentive players—the kind who build farms for practical needs and aesthetics, not technical optimization.

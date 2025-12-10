@@ -7,6 +7,7 @@
     "domains": "multitext",
     "titles": "multitext",
     "portfolios": "multitext",
-    "created_at": "date"
+    "created_at": "date",
+    "parent": "text"
   }
 }

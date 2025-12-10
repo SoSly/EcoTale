@@ -11,10 +11,10 @@ Bats are autonomous actors. They make decisions based on time of day, colony hea
 ## System Diagram
 
 ```mermaid
-flowchart TD
+flowchart LR
     RoostBlockEntity
     EcoTaleBat
-    MinecraftBrain["MinecraftBrain"]
+    Brain["MinecraftBrain"]
     MinecraftDayCycle["Minecraft Day/Night Cycle"]
 
     FlowFieldNavigation["FlowField Navigation"]
@@ -258,6 +258,8 @@ Bat dies (any cause)
 | Flow field ownership | Cached on RoostBlockEntity | Bats query via HOME; avoids duplicating data per bat             |
 | Colony knowledge     | Stored on RoostBlockEntity | Colony-level concern; bats contribute and query                  |
 | Stress response      | Behavior modification      | No separate "stressed" activity; existing behaviors check state  |
+| Feeding granularity  | Per-block, not per-farm    | Bats target individual farmland blocks; after feeding, a cooldown triggers before they get hungry again and pick another block |
+| Knowledge persistence | Persists with roost        | Colony knowledge survives chunk unloads; bats shouldn't have to rediscover resources every time the player walks away |
 
 ## Integration Points
 
@@ -282,12 +284,3 @@ Bat dies (any cause)
 - **Performance** — many bats ticking brains simultaneously needs monitoring
 - **Chunk boundaries** — bats may cross into unloaded chunks during foraging
 
-## Open Questions
-
-1. **Vanilla bat suppression** — Event cancellation vs mixin? Needs to allow EcoTaleBat and potentially other mods' bat entities.
-
-2. **Farm visit frequency** — How often should bats visit the same farm? Cooldown per farm, per bat, or colony-wide?
-
-3. **Knowledge persistence** — Should colony knowledge persist across chunk unloads/reloads, or rebuild from bat discoveries?
-
-4. **Stress behavior thresholds** — At what colony health states do specific behaviors activate (squeaking, daytime wakefulness)?

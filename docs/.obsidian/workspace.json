@@ -1,24 +1,24 @@
 {
   "main": {
-    "id": "85071f49c0773b96",
+    "id": "26907295daab9031",
     "type": "split",
     "children": [
       {
-        "id": "6ec7635b040de3f8",
+        "id": "435f3bd0a64cb17e",
         "type": "tabs",
         "children": [
           {
-            "id": "929166a87a964079",
+            "id": "6a52ed8e84935389",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE.md",
-                "mode": "source",
+                "file": "mobs/bats/AI Behavior.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE"
+              "title": "AI Behavior"
             }
           }
         ]
@@ -27,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "2583f110d5acc904",
+    "id": "00cb02627f7cbf43",
     "type": "split",
     "children": [
       {
-        "id": "05d88b72d03c64a3",
+        "id": "7582e83fabd7c248",
         "type": "tabs",
         "children": [
           {
-            "id": "52e5798b7d57d4dd",
+            "id": "9241f97ac113d871",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -48,7 +48,7 @@
             }
           },
           {
-            "id": "7bca1847e2f350a3",
+            "id": "26c23b2bdd62665c",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -71,20 +71,19 @@
     "width": 200
   },
   "right": {
-    "id": "ff5d45930a696124",
+    "id": "0475c884e784ffd3",
     "type": "split",
     "children": [
       {
-        "id": "4fcca4575a9e95a2",
+        "id": "257ca49e9f494d16",
         "type": "tabs",
         "children": [
           {
-            "id": "1178265b6208d29c",
+            "id": "bdf7bc021c965e68",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Images/Candrych.webp",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -94,115 +93,68 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Candrych"
+              "title": "Backlinks"
             }
           },
           {
-            "id": "42b5733674085a98",
+            "id": "4a5d80b48ea0bb1b",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "World/Candrych/Candrych.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Candrych"
+              "title": "Outgoing links"
             }
           },
           {
-            "id": "bbba455a94ba8bb5",
+            "id": "901a13d906e81e9b",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "Session 2.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Session 2"
-            }
-          },
-          {
-            "id": "591ad1947f007fb0",
-            "type": "leaf",
-            "state": {
-              "type": "media-companion-sidecar-view",
-              "state": {},
-              "icon": "image",
-              "title": "Sidecar"
+              "title": "Outline"
             }
           }
-        ],
-        "currentTab": 3
+        ]
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 300,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
-      "command-palette:Open command palette": false,
       "cmdr:Shell commands: Execute: start powershell": false,
+      "graph:Open graph view": false,
+      "command-palette:Open command palette": false,
       "media-companion:Open gallery": false,
       "obsidian-5e-statblocks:Open Creature pane": false,
-      "graph:Open graph view": false,
-      "obsidian-shellcommands:Shell commands: Custom variables": false,
+      "obsidian-stille:Toggle Stille": false,
       "open-vscode:VSCode": false,
-      "obsidian-stille:Toggle Stille": false
+      "obsidian-shellcommands:Shell commands: Custom variables": false
     }
   },
-  "active": "929166a87a964079",
+  "active": "6a52ed8e84935389",
   "lastOpenFiles": [
-    "Images/Candrych.png.sidecar.md",
-    "World/Nizam.md.tmp.32556.1764033379022",
-    "Images/Candrych.webp",
-    "Templates/Location.md",
-    "World/Keldraigh/Overview.md.tmp.3028.1763949789761",
-    "CLAUDE.md",
-    "Untitled.md",
-    "Session 2.md",
-    "Handouts/Warring Kingdoms.md",
-    "Handouts/Playing in the Singing City.md",
-    "Images/Raven Hill.webp.sidecar.md",
-    "Images/Raven Hill.webp",
-    "Images/Raven Hill.png.sidecar.md",
-    "Images/Raven Hill.png",
-    "Handouts/Warring Kingdoms.md.tmp.29532.1763175373526",
-    "Reference/Guidelines/GRAPES.md",
-    "Handouts/Warring Kingdoms.md.tmp.29532.1763149717066",
-    "Handouts/Warring Kingdoms.md.tmp.29532.1763148373110",
-    "World/Keldraigh/Overview.md",
-    "World/Súilmhar/Overview.md",
-    "World/Súilmhar/Overview.md.tmp.29532.1763145387123",
-    "CLAUDE.md.tmp.28536.1763144543860",
-    "CLAUDE.md.tmp.28536.1763144044852",
-    "Handouts/Playing in the Singing City.md.tmp.29532.1763139396008",
-    "Handouts/Deities/Arvané.md",
-    "Handouts/Deities/Velannis.md",
-    "World/Candrych/Rhannon Compromise.md",
-    "World/Nizam.md",
-    "World/Cosmology.md",
-    "World/Súilmhar",
-    "Handouts/Deities/Keiron.md",
-    "Handouts/A Duel at Dawn.md",
-    "World/Candrych/Overview.md",
-    "World/Keldraigh/Aguil Dubh.md",
-    "World/Candrych/Districts.md",
-    "World/Candrych/Coinage.md",
-    "World/Candrych/Geography.md",
-    "Non-Player Characters/Carillon Court/The Council of Twelve/Gregor MacAoidh.md",
-    "Reference/Guidelines/Cities.md",
-    "Images/npcs/Carillon Court/The Council of Twelve/Councilor Nadauna.webp",
-    "Images/npcs/The Sunken Quarter/Yil-Shadrath.webp",
-    "Images/npcs/The Sunken Quarter/Yil-Shadrath.png",
-    "Images/Rhannon Delta.webp",
-    "Images/Playing in the Singing City.webp",
-    "Images/npcs/Carillon Court/Bedwyr Museum of Prehistory/Alda Arkin.webp",
-    "Images/npcs/Bellweather/Mad Maddox's Alchemical Alehouse/Rhiannon Moss.webp",
-    "1.canvas"
+    "mobs/bats/pocs/Colony Size Performance.md",
+    "mobs/bats/AI Behavior.md",
+    "mobs/bats/Colony Health.md",
+    "mobs/bats/flow-field-implementation-plan.md",
+    "mobs/bats/flow-field-navigation.md",
+    "mobs/bats/pocs/Colony Size Aesthetics.md",
+    "mobs/bats/pocs",
+    "mobs/bats/AI Behavior.md.tmp.39548.1765394326472",
+    "mobs/bats/AI Behavior.md.tmp.42548.1765329402662",
+    "mobs/bats/Bats.md",
+    "mobs/bats/Colony Health.md.tmp.42548.1765326722728",
+    "EcoTale.md"
   ]
 }

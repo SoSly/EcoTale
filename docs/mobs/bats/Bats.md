@@ -1,3 +1,9 @@
+---
+level: 2
+parent: "[[EcoTale]]"
+status: review
+---
+
 Bats are a keystone species in many ecosystems. They serve as pollinators, seed dispersers, and—most relevantly—voracious insect predators. A single bat can eat thousands of insects per night, many of which would otherwise damage crops.
 
 Bats are social creatures that roost in colonies, returning to the same location day after day. They are nocturnal, sleeping during the day and emerging at dusk to hunt. They navigate and hunt using echolocation.
@@ -20,15 +26,14 @@ The player who discovers a bat colony near their base has found something valuab
 
 ### Systems Overview
 
-| System | What It Is | Player Benefit |
-|--------|------------|----------------|
-| AI Behavior | Autonomous bat actions: foraging, roosting, visiting farms, fleeing | Bats feel alive; behavior communicates colony state |
-| Guano | Layered blocks that accumulate below roosts | Bone meal equivalent; crafts into brown dye; smelts into gunpowder |
-| Pollination | Bats visit nearby farms at night | Accelerated crop growth |
-| Seed Discovery | Bats occasionally plant crops on empty farmland | Access to crop types you haven't found yet |
-| Mob Dampening | Reduced hostile spawns in bat territory | Safer nights; no phantoms |
-| Colony Health | Observable state that reflects disturbance and care | Feedback on whether you're helping or hurting |
-| Bat Boxes | Craftable roosts with reduced sensitivity to player activity | Enables colonies in existing worlds; trades peak output for stability |
+| System         | What It Is                                                          | Player Benefit                                                     |
+| -------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| AI Behavior    | Autonomous bat actions: foraging, roosting, visiting farms, fleeing | Bats feel alive; behavior communicates colony state                |
+| Guano          | Layered blocks that accumulate below roosts                         | Bone meal equivalent; crafts into brown dye; smelts into gunpowder |
+| Pollination    | Bats visit nearby farms at night                                    | Accelerated crop growth                                            |
+| Seed Discovery | Bats occasionally plant crops on empty farmland                     | Access to crop types you haven't found yet                         |
+| Mob Dampening  | Reduced hostile spawns in bat territory                             | Safer nights; no phantoms                                          |
+| Colony Health  | Observable state that reflects disturbance and care                 | Feedback on whether you're helping or hurting                      |
 
 ### Foundation Mapping
 
@@ -45,15 +50,19 @@ How bats satisfy each design pillar:
 ### Feedback Loops
 
 **Player → Environment (Harmful):**
+
 - Spending time near a roost disturbs the colony
 - Lighting a cave disturbs the colony
+- Killing bats stresses the colony
 - Prolonged disruption causes the colony to abandon their roost
 
 **Player → Environment (Helpful):**
+
 - Crops near the roost attract insects, improving colony health
 - Bat boxes provide stable shelter with reduced stress from player activity
 
 **Environment → Player:**
+
 - Healthy colonies produce guano you can harvest
 - Thriving colonies produce more guano
 - Bats visiting your farm accelerate crop growth
@@ -64,12 +73,14 @@ How bats satisfy each design pillar:
 ### Resource Exchange
 
 **What bats provide:**
+
 - **Guano** - accumulates below roosts; functions as bone meal, crafts into brown dye, smelts into gunpowder
 - **Crop pollination** - bats visiting farms have a chance to advance crop growth
 - **Seed discovery** - bats can cause crops to spawn on empty farmland, potentially introducing crops you haven't found yet
 - **Pest control** - reduced hostile mob spawns, spider deterrence, phantom suppression in bat territory
 
 **What players provide:**
+
 - Undisturbed darkness (passive)
 - Nearby crops (active)
 - Bat boxes as alternative shelter (active)
@@ -109,13 +120,13 @@ Active investment cannot replace passive care. A colony with perfect habitat but
 
 Colonies have visible states that reflect their health. Players who pay attention can read the system at a glance.
 
-| State | What You See | What It Means |
-|-------|--------------|---------------|
-| Thriving | More bats, increased activity | Colony is growing; enhanced guano production |
-| Calm | Normal behavior, idle animations | Colony is healthy, producing guano |
-| Agitated | Squeaking, particle effects | You're pushing it—back off soon |
-| Disrupted | Bats cluster together, face threats | No guano production, colony at risk |
-| Abandoned | There are no bats | Colony is gone |
+| State     | What You See                          | What It Means                                |
+| --------- | ------------------------------------- | -------------------------------------------- |
+| Thriving  | More bats, increased activity         | Colony is growing; enhanced guano production |
+| Calm      | Normal behavior, idle animations      | Colony is healthy, producing guano           |
+| Agitated  | Squeaking, some bats awake during day | You're pushing it—back off soon              |
+| Disrupted | Fewer bats, many awake during day     | No guano production, colony at risk          |
+| Abandoned | There are no bats                     | Colony is gone                               |
 
 Colonies don't fail suddenly—they degrade through these states, giving players time to correct course. Likewise, colonies don't thrive by accident—reaching the top requires active investment in habitat.
 
