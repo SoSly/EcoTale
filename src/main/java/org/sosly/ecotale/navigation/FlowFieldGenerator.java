@@ -550,7 +550,6 @@ public class FlowFieldGenerator {
         Vec3 outwardDirection = exitVec.subtract(hubVec).normalize();
 
         FlowFieldCell lastCell = previousCell;
-        BlockPos resultHub = null;
         int extensionCount = 0;
 
         while (extensionCount < MAX_RADIUS_CELLS) {
@@ -573,10 +572,6 @@ public class FlowFieldGenerator {
             inwardField.put(extensionCell, towardLast);
             BlockPos extensionHub = extensionCell.centerBlockPos();
             hubCache.put(extensionCell, extensionHub);
-
-            if (resultHub == null) {
-                resultHub = extensionHub;
-            }
             lastCell = extensionCell;
 
             if (isCellFullyOutside(extensionCell)) {
@@ -585,7 +580,7 @@ public class FlowFieldGenerator {
         }
 
         extensionCellCount = extensionCount;
-        return resultHub;
+        return lastCell.centerBlockPos();
     }
 
     private boolean isCellFullyOutside(FlowFieldCell cell) {
