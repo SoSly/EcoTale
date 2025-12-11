@@ -8,14 +8,10 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -130,11 +126,7 @@ public class FlowFieldSolution {
             return false;
         }
 
-        try {
-            if (!level.canSeeSky(exitPoint) || !level.getBlockState(exitPoint).isAir()) {
-                return false;
-            }
-        } catch (Exception e) {
+        if (!FlowFieldValidators.isExitValid(level, exitPoint)) {
             return false;
         }
 
@@ -211,118 +203,11 @@ public class FlowFieldSolution {
             return false;
         }
 
-        try {
-            if (!level.getBlockState(fromHub).isAir() || !level.getBlockState(toHub).isAir()) {
-                return false;
-            }
-        } catch (Exception e) {
+        if (!FlowFieldValidators.isHubValid(level, fromHub) || !FlowFieldValidators.isHubValid(level, toHub)) {
             return false;
         }
 
-        Direction direction = getDirectionBetweenCells(from, to);
-        if (direction == null) {
-            return false;
-        }
-
-        return hasBoundaryCrossing(from, direction, toHub, level);
-    }
-
-    private Direction getDirectionBetweenCells(FlowFieldCell from, FlowFieldCell to) {
-        int dx = to.x() - from.x();
-        int dy = to.y() - from.y();
-        int dz = to.z() - from.z();
-
-        if (dx == 1) {
-            return Direction.EAST;
-        }
-        if (dx == -1) {
-            return Direction.WEST;
-        }
-        if (dy == 1) {
-            return Direction.UP;
-        }
-        if (dy == -1) {
-            return Direction.DOWN;
-        }
-        if (dz == 1) {
-            return Direction.SOUTH;
-        }
-        if (dz == -1) {
-            return Direction.NORTH;
-        }
-        return null;
-    }
-
-    private boolean hasBoundaryCrossing(FlowFieldCell from, Direction direction, BlockPos toHub, Level level) {
-        int resolution = FlowFieldCell.RESOLUTION;
-        BlockPos boundaryStart = getBoundaryStart(from, direction);
-
-        BlockPos center = getPositionOnBoundary(boundaryStart, direction, resolution / 2, resolution / 2);
-        if (checkCrossing(center, direction, toHub, level)) {
-            return true;
-        }
-
-        for (int u = 0; u < resolution; u++) {
-            for (int v = 0; v < resolution; v++) {
-                BlockPos pos = getPositionOnBoundary(boundaryStart, direction, u, v);
-                if (checkCrossing(pos, direction, toHub, level)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private BlockPos getBoundaryStart(FlowFieldCell cell, Direction direction) {
-        int resolution = FlowFieldCell.RESOLUTION;
-        int baseX = cell.x() * resolution;
-        int baseY = cell.y() * resolution;
-        int baseZ = cell.z() * resolution;
-
-        return switch (direction) {
-            case EAST -> new BlockPos(baseX + resolution - 1, baseY, baseZ);
-            case WEST -> new BlockPos(baseX, baseY, baseZ);
-            case UP -> new BlockPos(baseX, baseY + resolution - 1, baseZ);
-            case DOWN -> new BlockPos(baseX, baseY, baseZ);
-            case SOUTH -> new BlockPos(baseX, baseY, baseZ + resolution - 1);
-            case NORTH -> new BlockPos(baseX, baseY, baseZ);
-        };
-    }
-
-    private BlockPos getPositionOnBoundary(BlockPos start, Direction direction, int u, int v) {
-        return switch (direction.getAxis()) {
-            case X -> start.offset(0, u, v);
-            case Y -> start.offset(u, 0, v);
-            case Z -> start.offset(u, v, 0);
-        };
-    }
-
-    private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos toHub, Level level) {
-        try {
-            if (!level.getBlockState(boundaryPos).isAir()) {
-                return false;
-            }
-
-            BlockPos otherSide = boundaryPos.relative(direction);
-            if (!level.getBlockState(otherSide).isAir()) {
-                return false;
-            }
-
-            return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub), level);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean raycastClear(Vec3 from, Vec3 to, Level level) {
-        try {
-            ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
-            BlockHitResult result = level.clip(context);
-            return result.getType() == HitResult.Type.MISS;
-        } catch (Exception e) {
-            return false;
-        }
+        return FlowFieldValidators.isCellTransitionValid(level, from, to, fromHub, toHub);
     }
 
     public void forEachOutwardCell(BiConsumer<FlowFieldCell, Vec3> consumer) {

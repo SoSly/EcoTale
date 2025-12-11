@@ -239,7 +239,7 @@ public class FlowFieldGenerator {
 
             BlockPos neighborHub = hubCache.get(neighbor);
             if (neighborHub != null) {
-                if (tryBoundaryCrossing(cell, neighbor, direction, cellHub, neighborHub)) {
+                if (FlowFieldValidators.isCellTransitionValid(level, cell, neighbor, cellHub, neighborHub)) {
                     neighbors.add(neighbor);
                 }
                 continue;
@@ -340,46 +340,6 @@ public class FlowFieldGenerator {
         return null;
     }
 
-    private boolean tryBoundaryCrossing(FlowFieldCell from, FlowFieldCell to, Direction direction, BlockPos fromHub, BlockPos toHub) {
-        BlockPos boundaryStart = getBoundaryStart(from, direction);
-        int resolution = FlowFieldCell.RESOLUTION;
-
-        BlockPos[] samples = getSamplePositions(boundaryStart, direction, resolution);
-        for (BlockPos sample : samples) {
-            if (checkCrossing(sample, direction, fromHub, toHub)) {
-                return true;
-            }
-        }
-
-        for (int u = 0; u < resolution; u++) {
-            for (int v = 0; v < resolution; v++) {
-                BlockPos pos = getPositionOnBoundary(boundaryStart, direction, u, v);
-                if (checkCrossing(pos, direction, fromHub, toHub)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private BlockPos[] getSamplePositions(BlockPos boundaryStart, Direction direction, int resolution) {
-        int mid = resolution / 2;
-        int max = resolution - 1;
-
-        return new BlockPos[] {
-            getPositionOnBoundary(boundaryStart, direction, mid, mid),
-            getPositionOnBoundary(boundaryStart, direction, 0, 0),
-            getPositionOnBoundary(boundaryStart, direction, max, 0),
-            getPositionOnBoundary(boundaryStart, direction, 0, max),
-            getPositionOnBoundary(boundaryStart, direction, max, max),
-            getPositionOnBoundary(boundaryStart, direction, mid, 0),
-            getPositionOnBoundary(boundaryStart, direction, mid, max),
-            getPositionOnBoundary(boundaryStart, direction, 0, mid),
-            getPositionOnBoundary(boundaryStart, direction, max, mid)
-        };
-    }
-
     private BlockPos getBoundaryStart(FlowFieldCell cell, Direction direction) {
         int resolution = FlowFieldCell.RESOLUTION;
         int baseX = cell.x() * resolution;
@@ -402,23 +362,6 @@ public class FlowFieldGenerator {
             case Y -> start.offset(u, 0, v);
             case Z -> start.offset(u, v, 0);
         };
-    }
-
-    private boolean checkCrossing(BlockPos boundaryPos, Direction direction, BlockPos fromHub, BlockPos toHub) {
-        if (!isAir(boundaryPos)) {
-            return false;
-        }
-
-        BlockPos otherSide = boundaryPos.relative(direction);
-        if (!isAir(otherSide)) {
-            return false;
-        }
-
-        if (!raycastClear(Vec3.atCenterOf(fromHub), Vec3.atCenterOf(boundaryPos))) {
-            return false;
-        }
-
-        return raycastClear(Vec3.atCenterOf(otherSide), Vec3.atCenterOf(toHub));
     }
 
     private boolean isExit(FlowFieldCell cell) {
