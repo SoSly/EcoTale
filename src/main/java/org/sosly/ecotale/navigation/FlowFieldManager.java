@@ -263,11 +263,12 @@ public class FlowFieldManager {
             LOGGER.debug("FlowField generation FAILED at {}: {}ms",
                     request.roostPos(), elapsed / 1_000_000.0);
         } else {
-            LOGGER.debug("FlowField generation at {}: {}ms, {} outward cells, {} inward cells, exit at {}",
+            LOGGER.debug("FlowField generation at {}: {}ms, {} outward cells, {} inward cells, {} extension cells, exit at {}",
                     request.roostPos(),
                     elapsed / 1_000_000.0,
                     solution.getOutwardCellCount(),
                     solution.getInwardCellCount(),
+                    generator.getExtensionCellCount(),
                     solution.getExitPoint());
         }
 

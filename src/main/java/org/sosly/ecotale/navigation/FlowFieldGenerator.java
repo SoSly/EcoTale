@@ -30,7 +30,6 @@ public class FlowFieldGenerator {
     private static final int MAX_RADIUS_BLOCKS = 128;
     private static final int MAX_RADIUS_CELLS = MAX_RADIUS_BLOCKS / FlowFieldCell.RESOLUTION;
     private static final int HUB_SEARCH_RADIUS = 4;
-    private static final int EXTENSION_CELLS = 3;
     private static final int EXIT_CLEARANCE = 3;
     private static final long TIMEOUT_MS = 5000;
     private static final int TIMEOUT_CHECK_INTERVAL = 100;
@@ -47,6 +46,7 @@ public class FlowFieldGenerator {
     private boolean aborted;
     private int iterationCount;
     private FlowFieldCell actualStartCell;
+    private int extensionCellCount;
 
     public FlowFieldGenerator(BlockPos roostPos, Level level) {
         this.roostPos = roostPos;
@@ -96,6 +96,10 @@ public class FlowFieldGenerator {
 
         BlockPos finalExit = elevatedExit != null ? elevatedExit : exitPoint;
         return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, finalExit, roostPos, actualStartCell);
+    }
+
+    public int getExtensionCellCount() {
+        return extensionCellCount;
     }
 
     private boolean checkTimeout() {
@@ -541,49 +545,69 @@ public class FlowFieldGenerator {
         }
 
         FlowFieldCell previousCell = exitPointCell.equals(exitCell) ? exitCell : exitPointCell;
-        FlowFieldCell firstExtension = new FlowFieldCell(previousCell.x(), previousCell.y() + 1, previousCell.z());
-
-        if (!cellHasSkyAccess(firstExtension)) {
-            return null;
-        }
-
-        Vec3 towardPrevious = vectorBetweenCells(firstExtension, previousCell).normalize();
-        inwardField.put(firstExtension, towardPrevious);
-        BlockPos firstExtensionHub = firstExtension.centerBlockPos();
-        hubCache.put(firstExtension, firstExtensionHub);
-
         Vec3 hubVec = Vec3.atCenterOf(exitHub);
         Vec3 exitVec = Vec3.atCenterOf(exitPoint);
         Vec3 outwardDirection = exitVec.subtract(hubVec).normalize();
 
-        FlowFieldCell lastCell = firstExtension;
-        for (int i = 1; i < EXTENSION_CELLS; i++) {
+        FlowFieldCell lastCell = previousCell;
+        BlockPos resultHub = null;
+        int extensionCount = 0;
+
+        while (extensionCount < MAX_RADIUS_CELLS) {
+            if (checkTimeout()) {
+                return null;
+            }
+
             FlowFieldCell extensionCell = new FlowFieldCell(
-                firstExtension.x() + (int) Math.round(outwardDirection.x * i),
-                firstExtension.y() + (int) Math.round(outwardDirection.y * i),
-                firstExtension.z() + (int) Math.round(outwardDirection.z * i)
+                previousCell.x() + (int) Math.round(outwardDirection.x * (extensionCount + 1)),
+                previousCell.y() + extensionCount + 1,
+                previousCell.z() + (int) Math.round(outwardDirection.z * (extensionCount + 1))
             );
+            extensionCount++;
 
             if (extensionCell.equals(lastCell)) {
                 continue;
             }
 
-            if (!cellHasSkyAccess(extensionCell)) {
-                break;
-            }
-
             Vec3 towardLast = vectorBetweenCells(extensionCell, lastCell).normalize();
             inwardField.put(extensionCell, towardLast);
-            hubCache.put(extensionCell, extensionCell.centerBlockPos());
+            BlockPos extensionHub = extensionCell.centerBlockPos();
+            hubCache.put(extensionCell, extensionHub);
+
+            if (resultHub == null) {
+                resultHub = extensionHub;
+            }
             lastCell = extensionCell;
+
+            if (isCellFullyOutside(extensionCell)) {
+                break;
+            }
         }
 
-        return firstExtensionHub;
+        extensionCellCount = extensionCount;
+        return resultHub;
     }
 
-    private boolean cellHasSkyAccess(FlowFieldCell cell) {
-        BlockPos center = cell.centerBlockPos();
-        return hasSkyAccess(center);
+    private boolean isCellFullyOutside(FlowFieldCell cell) {
+        int resolution = FlowFieldCell.RESOLUTION;
+        int baseX = cell.x() * resolution;
+        int baseY = cell.y() * resolution;
+        int baseZ = cell.z() * resolution;
+
+        for (int dx = 0; dx < resolution; dx++) {
+            for (int dz = 0; dz < resolution; dz++) {
+                BlockPos columnBase = new BlockPos(baseX + dx, baseY, baseZ + dz);
+                if (!hasSkyAccess(columnBase)) {
+                    return false;
+                }
+                for (int dy = 0; dy < resolution; dy++) {
+                    if (!isAir(columnBase.above(dy))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     private Map<FlowFieldCell, Vec3> buildOutwardField(Map<FlowFieldCell, Vec3> inwardField) {

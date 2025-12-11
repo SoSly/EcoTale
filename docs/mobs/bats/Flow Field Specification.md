@@ -144,8 +144,6 @@ The inward field must extend beyond the cave mouth so returning bats can pick up
 
 This ensures bats have unobstructed space for transitioning between cave navigation and outdoor flight.
 
-> **Implementation note:** The current implementation uses a fixed extension of 3 cells and 3 blocks of elevation. Update to use the "fully outside" termination condition instead.
-
 ### Hub Discovery
 
 Each cell needs a hub—a specific air block that serves as the navigation waypoint for that cell.
