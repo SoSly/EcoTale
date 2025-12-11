@@ -36,6 +36,7 @@ public class FlowFieldSolution {
     private final Map<FlowFieldCell, Vec3> outwardField;
     private final Map<FlowFieldCell, Vec3> inwardField;
     private final Map<FlowFieldCell, BlockPos> hubCache;
+    private final Set<FlowFieldCell> discoveredCells;
     private final BlockPos exitPoint;
     private final BlockPos roostPos;
     private final FlowFieldCell startCell;
@@ -45,6 +46,7 @@ public class FlowFieldSolution {
             Map<FlowFieldCell, Vec3> outwardField,
             Map<FlowFieldCell, Vec3> inwardField,
             Map<FlowFieldCell, BlockPos> hubCache,
+            Set<FlowFieldCell> discoveredCells,
             BlockPos exitPoint,
             BlockPos roostPos,
             FlowFieldCell startCell,
@@ -52,6 +54,7 @@ public class FlowFieldSolution {
         this.outwardField = outwardField;
         this.inwardField = inwardField;
         this.hubCache = hubCache;
+        this.discoveredCells = discoveredCells;
         this.exitPoint = exitPoint;
         this.roostPos = roostPos;
         this.startCell = startCell;
@@ -65,10 +68,22 @@ public class FlowFieldSolution {
             BlockPos exitPoint,
             BlockPos roostPos,
             FlowFieldCell startCell) {
+        return create(outwardField, inwardField, hubCache, Set.of(), exitPoint, roostPos, startCell);
+    }
+
+    public static FlowFieldSolution create(
+            Map<FlowFieldCell, Vec3> outwardField,
+            Map<FlowFieldCell, Vec3> inwardField,
+            Map<FlowFieldCell, BlockPos> hubCache,
+            Set<FlowFieldCell> discoveredCells,
+            BlockPos exitPoint,
+            BlockPos roostPos,
+            FlowFieldCell startCell) {
         return new FlowFieldSolution(
             new HashMap<>(outwardField),
             new HashMap<>(inwardField),
             new HashMap<>(hubCache),
+            new HashSet<>(discoveredCells),
             exitPoint,
             roostPos,
             startCell,
@@ -81,6 +96,7 @@ public class FlowFieldSolution {
             Map.of(),
             Map.of(),
             Map.of(),
+            Set.of(),
             null,
             roostPos,
             null,
@@ -226,6 +242,14 @@ public class FlowFieldSolution {
         return inwardField.size();
     }
 
+    public Set<FlowFieldCell> getDiscoveredCells() {
+        return discoveredCells;
+    }
+
+    public void forEachDiscoveredCell(java.util.function.Consumer<FlowFieldCell> consumer) {
+        discoveredCells.forEach(consumer);
+    }
+
     /**
      * Serializes this solution to NBT.
      */
@@ -273,7 +297,7 @@ public class FlowFieldSolution {
         Map<FlowFieldCell, Vec3> inwardField = loadVectorField(tag.getList(TAG_INWARD, Tag.TAG_COMPOUND));
         Map<FlowFieldCell, BlockPos> hubCache = loadHubCache(tag.getList(TAG_HUBS, Tag.TAG_COMPOUND));
 
-        return new FlowFieldSolution(outwardField, inwardField, hubCache, exitPoint, roostPos, startCell, false);
+        return new FlowFieldSolution(outwardField, inwardField, hubCache, Set.of(), exitPoint, roostPos, startCell, false);
     }
 
     private static ListTag saveVectorField(Map<FlowFieldCell, Vec3> field) {

@@ -9,7 +9,9 @@ import org.sosly.ecotale.navigation.FlowFieldCell;
 import org.sosly.ecotale.navigation.FlowFieldSolution;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public class FlowFieldDebugPacket {
@@ -71,6 +73,12 @@ public class FlowFieldDebugPacket {
             writeCell(buf, entry.getKey());
             buf.writeBlockPos(entry.getValue());
         }
+
+        Set<FlowFieldCell> discovered = solution.getDiscoveredCells();
+        buf.writeVarInt(discovered.size());
+        for (FlowFieldCell cell : discovered) {
+            writeCell(buf, cell);
+        }
     }
 
     public static FlowFieldDebugPacket decode(FriendlyByteBuf buf) {
@@ -112,9 +120,15 @@ public class FlowFieldDebugPacket {
             hubs.put(cell, hub);
         }
 
+        Set<FlowFieldCell> discovered = new HashSet<>();
+        int discoveredCount = buf.readVarInt();
+        for (int i = 0; i < discoveredCount; i++) {
+            discovered.add(readCell(buf));
+        }
+
         FlowFieldCell startCell = FlowFieldCell.fromBlockPos(roostPos);
         FlowFieldSolution solution = FlowFieldSolution.create(
-            outward, inward, hubs, exitPoint, roostPos, startCell
+            outward, inward, hubs, discovered, exitPoint, roostPos, startCell
         );
 
         return new FlowFieldDebugPacket(roostPos, false, solution);

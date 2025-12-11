@@ -94,12 +94,23 @@ public class FlowFieldGenerator {
             }
         }
 
+        Set<FlowFieldCell> discoveredCells = new HashSet<>(visited);
+        discoveredCells.removeAll(pathCells);
+
         BlockPos finalExit = elevatedExit != null ? elevatedExit : exitPoint;
-        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, finalExit, roostPos, actualStartCell);
+        return FlowFieldSolution.create(outwardField, inwardField, pathHubCache, discoveredCells, finalExit, roostPos, actualStartCell);
     }
 
     public int getExtensionCellCount() {
         return extensionCellCount;
+    }
+
+    public int getVisitedCellCount() {
+        return visited.size();
+    }
+
+    public Map<FlowFieldCell, FlowFieldCell> getDiscoveredCells() {
+        return new HashMap<>(cameFrom);
     }
 
     private boolean checkTimeout() {

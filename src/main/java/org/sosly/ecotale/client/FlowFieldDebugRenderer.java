@@ -60,6 +60,10 @@ public final class FlowFieldDebugRenderer {
     private static final float ROOST_MISSING_G = 0.0f;
     private static final float ROOST_MISSING_B = 0.0f;
 
+    private static final float DISCOVERED_R = 0.4f;
+    private static final float DISCOVERED_G = 0.4f;
+    private static final float DISCOVERED_B = 0.4f;
+
     private static final float LINE_ALPHA = 1.0f;
     private static final int EXIT_COLUMN_HEIGHT = 5;
     private static final float LINE_OFFSET = 0.15f;
@@ -149,6 +153,9 @@ public final class FlowFieldDebugRenderer {
             FlowFieldCell roostCell = FlowFieldCell.fromBlockPos(roostPos);
             renderCellBoundingBox(buffer, matrix, roostCell, ROOST_CELL_R, ROOST_CELL_G, ROOST_CELL_B);
         }
+
+        solution.forEachDiscoveredCell(cell ->
+            renderCellBoundingBox(buffer, matrix, cell, DISCOVERED_R, DISCOVERED_G, DISCOVERED_B));
 
         solution.forEachOutwardCell((cell, direction) -> {
             renderCellBoundingBox(buffer, matrix, cell, CELL_R, CELL_G, CELL_B);
