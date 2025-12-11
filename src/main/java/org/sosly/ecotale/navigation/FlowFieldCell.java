@@ -40,4 +40,14 @@ public record FlowFieldCell(int x, int y, int z) {
             z * RESOLUTION + RESOLUTION / 2
         );
     }
+
+    public boolean contains(BlockPos position) {
+        int minX = x * RESOLUTION;
+        int minY = y * RESOLUTION;
+        int minZ = z * RESOLUTION;
+
+        return position.getX() >= minX && position.getX() < minX + RESOLUTION
+            && position.getY() >= minY && position.getY() < minY + RESOLUTION
+            && position.getZ() >= minZ && position.getZ() < minZ + RESOLUTION;
+    }
 }

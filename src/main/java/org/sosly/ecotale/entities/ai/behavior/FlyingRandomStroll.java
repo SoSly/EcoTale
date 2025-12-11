@@ -5,9 +5,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.Behavior;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.phys.Vec3;
-import org.sosly.ecotale.entities.ai.AIConstants;
 import org.sosly.ecotale.api.entities.IFlyingMob;
+import org.sosly.ecotale.entities.ai.AIConstants;
+import org.sosly.ecotale.entities.ai.MemoryModuleTypes;
 import org.sosly.ecotale.entities.ai.util.FlyingMobRandomPos;
 
 public class FlyingRandomStroll<T extends Mob & IFlyingMob<T>> extends Behavior<T> {
@@ -19,7 +21,9 @@ public class FlyingRandomStroll<T extends Mob & IFlyingMob<T>> extends Behavior<
     private long lastNavTick;
 
     public FlyingRandomStroll() {
-        super(ImmutableMap.of(), 1, 200);
+        super(ImmutableMap.of(
+                MemoryModuleTypes.FLY_TARGET.get(), MemoryStatus.VALUE_ABSENT
+        ), 1, 200);
     }
 
     @Override
