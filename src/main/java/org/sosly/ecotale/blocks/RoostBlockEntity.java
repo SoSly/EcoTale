@@ -224,13 +224,16 @@ public class RoostBlockEntity extends BlockEntity {
 
     public void spawnColony(WorldGenLevel level, RandomSource random) {
         int count = random.nextIntBetweenInclusive(1, 4);
-        spawnColony(level.getLevel(), count);
+        spawnColony(level.getLevel(), count, random);
     }
 
     public int spawnColony(ServerLevel level, int count) {
+        return spawnColony(level, count, level.getRandom());
+    }
+
+    private int spawnColony(ServerLevel level, int count, RandomSource random) {
         BlockPos roostPos = this.getBlockPos();
         GlobalPos home = GlobalPos.of(level.dimension(), roostPos);
-        RandomSource random = level.getRandom();
         int spawned = 0;
 
         for (int i = 0; i < count; i++) {
