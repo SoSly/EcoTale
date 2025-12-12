@@ -2,7 +2,7 @@ package org.sosly.ecotale.entities.ai;
 
 import java.util.Optional;
 
-import com.mojang.serialization.Codec;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -19,9 +19,9 @@ public class MemoryModuleTypes {
             MEMORY_MODULE_TYPES.register("fly_target", () ->
                     new MemoryModuleType<>(Optional.empty()));
 
-    public static final RegistryObject<MemoryModuleType<Boolean>> IS_OUTSIDE =
-            MEMORY_MODULE_TYPES.register("is_outside", () ->
-                    new MemoryModuleType<>(Optional.of(Codec.BOOL)));
+    public static final RegistryObject<MemoryModuleType<GlobalPos>> ROOST =
+            MEMORY_MODULE_TYPES.register("roost", () ->
+                    new MemoryModuleType<>(Optional.of(GlobalPos.CODEC)));
 
     public static void register(IEventBus eventBus) {
         MEMORY_MODULE_TYPES.register(eventBus);

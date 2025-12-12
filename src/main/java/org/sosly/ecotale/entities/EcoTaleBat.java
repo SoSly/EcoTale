@@ -40,7 +40,7 @@ import org.sosly.ecotale.entities.ai.behavior.bat.RestAtRoost;
 import org.sosly.ecotale.entities.ai.behavior.bat.ReturnToRoost;
 import org.sosly.ecotale.entities.ai.behavior.bat.WakeUp;
 import org.sosly.ecotale.entities.ai.behavior.bat.WakeIfRoostDistant;
-import org.sosly.ecotale.navigation.FlowFieldSolution;
+import org.sosly.ecotale.navigation.Graph;
 
 public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
@@ -48,10 +48,10 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
             MemoryModuleType.PATH,
             MemoryModuleType.LOOK_TARGET,
             MemoryModuleTypes.FLY_TARGET.get(),
-            MemoryModuleTypes.IS_OUTSIDE.get()
+            MemoryModuleTypes.ROOST.get()
     );
     private static final ImmutableList<SensorType<? extends Sensor<? super EcoTaleBat>>> SENSOR_TYPES =
-            ImmutableList.of(SensorTypes.HOME.get(), SensorTypes.SKY.get());
+            ImmutableList.of(SensorTypes.HOME.get());
 
     public EcoTaleBat(EntityType<? extends Bat> entityType, Level level) {
         super(entityType, level);
@@ -151,8 +151,9 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
             tag.putString("HomeDimension", globalPos.dimension().location().toString());
             tag.putLong("HomePos", globalPos.pos().asLong());
         });
-        this.getBrain().getMemory(MemoryModuleTypes.IS_OUTSIDE.get()).ifPresent(isOutside -> {
-            tag.putBoolean("IsOutside", isOutside);
+        this.getBrain().getMemory(MemoryModuleTypes.ROOST.get()).ifPresent(globalPos -> {
+            tag.putString("RoostDimension", globalPos.dimension().location().toString());
+            tag.putLong("RoostPos", globalPos.pos().asLong());
         });
     }
 
@@ -167,13 +168,22 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
             BlockPos pos = BlockPos.of(tag.getLong("HomePos"));
             this.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(dimension, pos));
         }
-        if (tag.contains("IsOutside")) {
-            this.getBrain().setMemory(MemoryModuleTypes.IS_OUTSIDE.get(), tag.getBoolean("IsOutside"));
+        if (tag.contains("RoostPos")) {
+            ResourceKey<Level> dimension = ResourceKey.create(
+                    Registries.DIMENSION,
+                    new ResourceLocation(tag.getString("RoostDimension"))
+            );
+            BlockPos pos = BlockPos.of(tag.getLong("RoostPos"));
+            this.getBrain().setMemory(MemoryModuleTypes.ROOST.get(), GlobalPos.of(dimension, pos));
         }
     }
 
     public void setHome(GlobalPos pos) {
         this.getBrain().setMemory(MemoryModuleType.HOME, pos);
+    }
+
+    public void setRoost(GlobalPos pos) {
+        this.getBrain().setMemory(MemoryModuleTypes.ROOST.get(), pos);
     }
 
     @Override
@@ -193,13 +203,12 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
             return home.pos();
         }
 
-        FlowFieldSolution solution = roost.getFlowFieldSolution();
-        if (solution == null || solution.isFailed()) {
+        Graph graph = roost.getGraph();
+        if (graph == null || graph.getGraphExits().isEmpty()) {
             return home.pos();
         }
 
-        BlockPos exitPoint = solution.getExitPoint();
-        return exitPoint != null ? exitPoint : home.pos();
+        return graph.getGraphExits().iterator().next();
     }
 
     @Override

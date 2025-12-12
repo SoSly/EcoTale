@@ -121,6 +121,7 @@ gradle-app.setting
 # Common working directory
 run/
 repo/
+logs/
 
 # Generated resources (created by datagen)
 src/generated/

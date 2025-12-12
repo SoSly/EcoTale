@@ -15,8 +15,7 @@ import org.sosly.ecotale.EcoTale;
 import org.sosly.ecotale.blocks.RoostBlockEntity;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.EntityRegistry;
-import org.sosly.ecotale.navigation.FlowFieldManager;
-import org.sosly.ecotale.navigation.FlowFieldSolution;
+import org.sosly.ecotale.navigation.Graph;
 import org.sosly.ecotale.utils.TestUtils;
 
 @PrefixGameTestTemplate(false)
@@ -49,13 +48,12 @@ public class ReturnToRoostGameTest {
             return;
         }
 
-        roost.setFlowFieldSolution(null);
-        FlowFieldManager.getInstance().requestGeneration(roost);
+        roost.forceRegenerate();
 
         List<EcoTaleBat> bats = new ArrayList<>();
 
         helper.succeedWhen(() -> {
-            hasValidSolution(roost);
+            hasValidGraph(roost);
 
             if (bats.isEmpty()) {
                 for (int i = 0; i < BAT_COUNT; i++) {
@@ -65,7 +63,9 @@ public class ReturnToRoostGameTest {
                     }
                     BlockPos spawnPos = absoluteRoost.offset(SPAWN_OFFSETS[i]);
                     bat.moveTo(spawnPos.getX() + 0.5, spawnPos.getY() + 0.5, spawnPos.getZ() + 0.5, 0, 0);
-                    bat.setHome(GlobalPos.of(level.dimension(), absoluteRoost));
+                    GlobalPos roostGlobalPos = GlobalPos.of(level.dimension(), absoluteRoost);
+                    bat.setHome(roostGlobalPos);
+                    bat.setRoost(roostGlobalPos);
                     bat.setResting(false);
                     level.addFreshEntity(bat);
                     bats.add(bat);
@@ -79,15 +79,15 @@ public class ReturnToRoostGameTest {
         });
     }
 
-    private void hasValidSolution(RoostBlockEntity roost) {
-        FlowFieldSolution solution = roost.getFlowFieldSolution();
+    private void hasValidGraph(RoostBlockEntity roost) {
+        Graph graph = roost.getGraph();
 
-        if (solution == null) {
-            throw new GameTestAssertException("Solution not yet computed");
+        if (graph == null) {
+            throw new GameTestAssertException("Graph not yet computed");
         }
 
-        if (solution.isFailed()) {
-            throw new GameTestAssertException("Solution generation failed");
+        if (graph.getGraphExits().isEmpty()) {
+            throw new GameTestAssertException("Graph has no exits");
         }
     }
 
