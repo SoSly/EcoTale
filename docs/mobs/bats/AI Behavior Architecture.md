@@ -17,7 +17,7 @@ flowchart LR
     Brain["MinecraftBrain"]
     MinecraftDayCycle["Minecraft Day/Night Cycle"]
 
-    FlowFieldNavigation["FlowField Navigation"]
+    NavigationGraph["Navigation Graph"]
     ColonyComms["Colony Communication"]
 
     PollinationSystem["Pollination System"]
@@ -25,8 +25,8 @@ flowchart LR
     GuanoSystem["Guano System"]
     ColonyHealth["Colony Health"]
 
-    %% FlowField Navigation
-    RoostBlockEntity -->|"generates/caches"| FlowFieldNavigation
+    %% Navigation Graph
+    RoostBlockEntity -->|"generates/caches"| NavigationGraph
 
     %% Daily Cycle
     MinecraftDayCycle -->|"current time"| Schedule
@@ -40,13 +40,13 @@ flowchart LR
 
     %% Foraging Activity
     EcoTaleBat -->|"triggers"| ForagingActivity
-    ForagingActivity <-->|"requests/provides"| FlowFieldNavigation
+    ForagingActivity <-->|"requests/provides"| NavigationGraph
     ForagingActivity -->|"triggers"| PollinationSystem
     ForagingActivity -->|"triggers"| SeedDiscovery
 
     %% Roosting Activity
     EcoTaleBat -->|"triggers"| RoostingActivity
-    RoostingActivity <-->|"requests/provides"| FlowFieldNavigation
+    RoostingActivity <-->|"requests/provides"| NavigationGraph
     RoostingActivity -->|"spawns"| GuanoSystem
     ColonyHealth -->|"health state"| RoostingActivity
 
@@ -59,13 +59,13 @@ flowchart LR
 
 AI Behavior decomposes into these subsystems, each requiring further specification:
 
-| Subsystem             | What It Does                                           | Key Concerns                                                |
-| --------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
-| Minecraft Brain       | Controls schedules and AI goals                        | Sensors, Memories, and Behaviors                            |
-| Flow Field Navigation | Guides bats through caves using precomputed paths      | Generation threading, solution caching, exit identification |
-| Foraging Activity     | Controls what bats do outside the cave                 | Farm detection, pollination triggers, wander patterns       |
-| Roosting Activity     | Controls what bats do at the roost                     | Return navigation, rest states, stress responses            |
-| Colony Communication  | Shares discovered resource locations among colony bats | Knowledge storage, discovery reporting, query interface     |
+| Subsystem            | What It Does                                           | Key Concerns                                                     |
+| -------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| Minecraft Brain      | Controls schedules and AI goals                        | Sensors, Memories, and Behaviors                                 |
+| Navigation Graph     | Guides bats through caves using precomputed paths      | Generation threading, graph caching, multi-exit support          |
+| Foraging Activity    | Controls what bats do outside the cave                 | Farm detection, pollination triggers, wander patterns            |
+| Roosting Activity    | Controls what bats do at the roost                     | Return navigation, rest states, stress responses                 |
+| Colony Communication | Shares discovered resource locations among colony bats | Knowledge storage, discovery reporting, query interface          |
 
 ### Minecraft Brain
 
@@ -82,21 +82,20 @@ Minecraft's Brain system organizes entity AI into sensors (perception), memories
 
 **Open parameters:** Exact tick values for activity transitions (dusk, pre-dawn).
 
-### Flow Field Navigation
+### Navigation Graph
 
-Responsible for guiding bats through cave systems using precomputed directional data.
+Responsible for guiding bats through cave systems using precomputed path data.
 
 **Must support:**
 
-- Generating outward flow field (roost → exit) for leaving the cave
-- Generating inward flow field (exit → roost) for returning home
-- Identifying cave exits and elevated entrance points above terrain
-- Running generation off the main thread to avoid lag
-- Caching solutions for bat queries
-- Periodic revalidation to detect geometry changes
-- Sharing solutions between nearby roosts with overlapping territory
+- Generating navigation graphs covering all reachable cells from the roost
+- Supporting multiple exits per cave (bats can leave via any discovered exit)
+- Providing next-waypoint lookups for any destination (roost or any exit)
+- Running generation off the main thread via preemptible queue
+- Caching graphs on the roost for bat queries
+- Regenerating when block changes occur within the graph's radius
 
-**Open parameters:** Flow field resolution, search bounds, generation queue behavior, revalidation frequency, solution sharing criteria.
+**Open parameters:** Cell resolution, search bounds, refresh trigger sensitivity.
 
 ### Foraging Activity
 
@@ -104,7 +103,7 @@ Responsible for bat actions outside the cave during FORAGE activity.
 
 **Must support:**
 
-- Exiting the cave via flow field navigation
+- Exiting the cave via navigation graph
 - Wandering randomly with obstacle avoidance
 - Detecting nearby farms within foraging range
 - Visiting farms to trigger pollination
@@ -118,7 +117,7 @@ Responsible for bat actions at or near the roost during ROOST activity.
 
 **Must support:**
 
-- Returning to cave entrance and following flow field to roost
+- Returning to cave entrance and following navigation graph to roost
 - Resting at roost with idle animations
 - Dropping guano periodically while roosting
 - Stress-responsive behaviors (squeaking, daytime wakefulness) based on colony health state
@@ -155,14 +154,14 @@ Colony Communication is not a separate component—it's a pattern describing how
 
 - Ticks brain each server tick
 - Queries home roost for colony health state
-- Queries flow field for navigation direction
+- Queries navigation graph for next waypoint
 - Reports discovered resources to colony
 - Produces stress-responsive behaviors (squeaking, daytime wakefulness)
 
 **Does not:**
 
 - Own colony state (that's Colony Health)
-- Own flow field data (cached on roost, queried by bat)
+- Own navigation graph (cached on roost, queried by bat)
 - Own colony knowledge (stored on roost, queried by bat)
 
 ### Minecraft Brain (vanilla system)
@@ -202,11 +201,11 @@ Brain ticks (vanilla)
 ```
 ExitCave behavior runs
     → queries HOME memory for roost position
-    → retrieves flow field from RoostBlockEntity
-    → samples outward flow field at current position
-    → sets FLY_TARGET to waypoint in flow direction
+    → retrieves navigation graph from RoostBlockEntity
+    → queries graph for next waypoint toward nearest exit
+    → sets FLY_TARGET to that waypoint
     → navigator moves bat toward target
-    → on reaching elevated exit point, sets IS_OUTSIDE = true
+    → on reaching exit point, sets IS_OUTSIDE = true
 ```
 
 ### Cave Return (ROOST, IS_OUTSIDE = true)
@@ -214,8 +213,8 @@ ExitCave behavior runs
 ```
 ReturnToRoost behavior runs
     → flies toward cave entrance position
-    → on entering flow field range, samples inward flow field
-    → follows flow field toward roost
+    → on entering graph coverage, queries for next waypoint toward roost
+    → follows graph waypoints toward roost
     → on reaching roost vicinity, clears IS_OUTSIDE
 ```
 
@@ -253,7 +252,7 @@ Bat dies (any cause)
 | AI system            | Brain over Goals           | Sensors for perception, memories for state, schedules for cycles |
 | Entity inheritance   | Extend vanilla Bat         | Passes instanceof checks, inherits sounds/visuals/hitbox         |
 | Activity count       | Two (ROOST, FORAGE)        | Simple; IS_OUTSIDE memory handles sub-phases within each         |
-| Flow field ownership | Cached on RoostBlockEntity | Bats query via HOME; avoids duplicating data per bat             |
+| Graph ownership      | Cached on RoostBlockEntity | Bats query via HOME; avoids duplicating data per bat             |
 | Colony knowledge     | Stored on RoostBlockEntity | Colony-level concern; bats contribute and query                  |
 | Stress response      | Behavior modification      | No separate "stressed" activity; existing behaviors check state  |
 | Feeding granularity  | Per-block, not per-farm    | Bats target individual farmland blocks; after feeding, a cooldown triggers before they get hungry again and pick another block |
@@ -264,7 +263,7 @@ Bat dies (any cause)
 ### Depends On
 
 - **Colony Health** — provides health state that affects behavior
-- **RoostBlockEntity** — stores flow field cache and colony knowledge
+- **RoostBlockEntity** — stores navigation graph and colony knowledge
 - **Minecraft Brain System** — provides sensors, memories, activities, behaviors
 - **Minecraft Navigator** — handles local pathfinding to waypoints
 

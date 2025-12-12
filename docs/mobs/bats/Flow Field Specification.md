@@ -1,7 +1,7 @@
 ---
 level: 4
 parent: "[[AI Behavior Architecture]]"
-status: review
+status: abandoned
 ---
 
 The Flow Field Navigation subsystem generates and caches precomputed directional data that guides bats through cave systems. It serves the AI Behavior Architecture by providing the navigation layer that enables bats to exit caves at dusk and return at dawn.
