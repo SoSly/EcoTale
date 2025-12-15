@@ -15,11 +15,11 @@ public class ClientEvents {
             return;
         }
 
-        FlowFieldDebugRenderer.render(event.getPoseStack());
+        GraphDebugRenderer.render(event.getPoseStack());
     }
 
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
-        FlowFieldDebugRenderer.clear();
+        GraphDebugRenderer.clear();
     }
 }

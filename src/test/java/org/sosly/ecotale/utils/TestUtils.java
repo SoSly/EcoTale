@@ -6,9 +6,13 @@ import org.sosly.ecotale.blocks.AbstractRoostBlock;
 
 public class TestUtils {
     public static BlockPos findRoostInStructure(GameTestHelper helper) {
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y < 12; y++) {
-                for (int z = 0; z < 8; z++) {
+        return findRoostInStructure(helper, 48, 36, 48);
+    }
+
+    public static BlockPos findRoostInStructure(GameTestHelper helper, int maxX, int maxY, int maxZ) {
+        for (int x = 0; x < maxX; x++) {
+            for (int y = 0; y < maxY; y++) {
+                for (int z = 0; z < maxZ; z++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (helper.getBlockState(pos).getBlock() instanceof AbstractRoostBlock) {
                         return pos;

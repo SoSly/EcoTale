@@ -23,16 +23,10 @@ public final class NetworkHandler {
     }
 
     public static void register() {
-        CHANNEL.messageBuilder(FlowFieldDebugPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
-            .decoder(FlowFieldDebugPacket::decode)
-            .encoder(FlowFieldDebugPacket::encode)
-            .consumerMainThread(FlowFieldDebugPacket::handle)
-            .add();
-
-        CHANNEL.messageBuilder(RoostStatusPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
-            .decoder(RoostStatusPacket::decode)
-            .encoder(RoostStatusPacket::encode)
-            .consumerMainThread(RoostStatusPacket::handle)
+        CHANNEL.messageBuilder(GraphDebugPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+            .decoder(GraphDebugPacket::decode)
+            .encoder(GraphDebugPacket::encode)
+            .consumerMainThread(GraphDebugPacket::handle)
             .add();
     }
 

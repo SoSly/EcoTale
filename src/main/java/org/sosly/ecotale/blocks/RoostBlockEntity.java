@@ -6,34 +6,26 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
+import org.sosly.ecotale.api.IGraphProvider;
 import org.sosly.ecotale.entities.EcoTaleBat;
 import org.sosly.ecotale.entities.EntityRegistry;
-import org.sosly.ecotale.navigation.FlowFieldCell;
-import org.sosly.ecotale.navigation.FlowFieldManager;
-import org.sosly.ecotale.navigation.FlowFieldSolution;
+import org.sosly.ecotale.navigation.Graph;
+import org.sosly.ecotale.navigation.Manager;
 
-public class RoostBlockEntity extends BlockEntity {
+public class RoostBlockEntity extends BlockEntity implements IGraphProvider {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String TAG_FLOW_FIELD = "flowField";
+    private static final String TAG_GRAPH = "graph";
     private static final String TAG_FAILURE_COUNT = "failureCount";
     private static final String TAG_NEXT_RETRY_TICK = "nextRetryTick";
-    private static final int VALIDATION_INTERVAL = 600;
     private static final int BASE_RETRY_DELAY = 600;
     private static final int MAX_RETRY_DELAY = 6000;
 
-    private FlowFieldSolution flowFieldSolution;
-    private FlowFieldSolution candidateSolution;
-    private FlowFieldCell registeredStartCell;
-    private int validationTicker = VALIDATION_INTERVAL;
+    private Graph graph;
     private int failureCount;
     private long nextRetryTick;
     private boolean pendingRequest;
@@ -49,16 +41,17 @@ public class RoostBlockEntity extends BlockEntity {
         if (level == null || level.isClientSide()) {
             return;
         }
-        if (flowFieldSolution == null && !pendingRequest) {
-            requestGenerationWithBackoff();
+        Manager.getInstance().registerRoost(this);
+        if (graph == null && !pendingRequest) {
+            requestGraphGeneration();
         }
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        if (flowFieldSolution != null) {
-            tag.put(TAG_FLOW_FIELD, flowFieldSolution.save());
+        if (graph != null) {
+            tag.put(TAG_GRAPH, graph.save());
         }
         if (failureCount > 0) {
             tag.putInt(TAG_FAILURE_COUNT, failureCount);
@@ -69,145 +62,63 @@ public class RoostBlockEntity extends BlockEntity {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        if (tag.contains(TAG_FLOW_FIELD)) {
-            flowFieldSolution = FlowFieldSolution.load(tag.getCompound(TAG_FLOW_FIELD));
-        }
+        graph = tag.contains(TAG_GRAPH) ? Graph.load(tag.getCompound(TAG_GRAPH)) : null;
         failureCount = tag.getInt(TAG_FAILURE_COUNT);
         nextRetryTick = tag.getLong(TAG_NEXT_RETRY_TICK);
     }
 
-    public FlowFieldSolution getFlowFieldSolution() {
-        return flowFieldSolution;
-    }
-
-    public void setFlowFieldSolution(FlowFieldSolution solution) {
-        this.flowFieldSolution = solution;
-        if (solution != null && !solution.isFailed()) {
-            failureCount = 0;
-            nextRetryTick = 0;
-        }
-        setChanged();
+    @Override
+    public Graph getGraph() {
+        return graph;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, RoostBlockEntity roost) {
-        roost.validationTicker--;
-        if (roost.validationTicker <= 0) {
-            roost.validationTicker = VALIDATION_INTERVAL;
-            roost.validateAndRegenerate();
+        if (roost.graph == null && !roost.pendingRequest && level.getGameTime() >= roost.nextRetryTick) {
+            roost.requestGraphGeneration();
         }
     }
 
-    private void validateAndRegenerate() {
+    private void requestGraphGeneration() {
         Level level = getLevel();
         if (level == null || level.isClientSide() || pendingRequest) {
             return;
         }
-
-        if (candidateSolution != null) {
-            if (canAdoptSolution(candidateSolution, level)) {
-                flowFieldSolution = candidateSolution;
-                registeredStartCell = candidateSolution.getStartCell();
-                FlowFieldManager.getInstance().registerRoost(this, registeredStartCell);
-                failureCount = 0;
-                nextRetryTick = 0;
-                setChanged();
-            }
-            candidateSolution = null;
-            return;
-        }
-
-        long gameTime = level.getGameTime();
-
-        if (flowFieldSolution == null || flowFieldSolution.isFailed()) {
-            if (gameTime >= nextRetryTick) {
-                requestGenerationWithBackoff();
-            }
-            return;
-        }
-
         pendingRequest = true;
-        FlowFieldManager.getInstance().requestValidation(this, flowFieldSolution);
-    }
-
-    private boolean canAdoptSolution(FlowFieldSolution solution, Level level) {
-        FlowFieldCell myCell = FlowFieldCell.fromBlockPos(getBlockPos());
-        FlowFieldCell solutionStart = solution.getStartCell();
-        if (solutionStart == null || !myCell.equals(solutionStart)) {
-            return false;
-        }
-
-        BlockPos hub = solution.getHubPosition(solutionStart).orElse(null);
-        if (hub == null) {
-            return false;
-        }
-
-        Vec3 roostVec = Vec3.atCenterOf(getBlockPos().below());
-        Vec3 hubVec = Vec3.atCenterOf(hub);
-        if (!raycastClear(roostVec, hubVec, level)) {
-            return false;
-        }
-
-        return solution.isValid(level);
-    }
-
-    private boolean raycastClear(Vec3 from, Vec3 to, Level level) {
-        try {
-            ClipContext context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
-            BlockHitResult result = level.clip(context);
-            return result.getType() == HitResult.Type.MISS;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void requestGenerationWithBackoff() {
-        if (pendingRequest) {
-            return;
-        }
-
-        pendingRequest = true;
-        FlowFieldManager.getInstance().requestGeneration(this);
-    }
-
-    public void forceRevalidate() {
-        failureCount = 0;
-        nextRetryTick = 0;
-        pendingRequest = false;
-        validateAndRegenerate();
+        Manager.getInstance().requestGeneration(
+            getBlockPos(),
+            level,
+            EntityRegistry.BAT.get(),
+            this::onGraphGenerationComplete
+        );
     }
 
     public void forceRegenerate() {
-        flowFieldSolution = null;
-        candidateSolution = null;
+        graph = null;
         failureCount = 0;
         nextRetryTick = 0;
         pendingRequest = true;
         setChanged();
-        FlowFieldManager.getInstance().requestPriorityGeneration(this);
+        Level level = getLevel();
+        if (level != null && !level.isClientSide()) {
+            Manager.getInstance().requestPriorityGeneration(
+                getBlockPos(),
+                level,
+                EntityRegistry.BAT.get(),
+                this::onGraphGenerationComplete
+            );
+        }
     }
 
-    public void onGenerationComplete(FlowFieldSolution solution) {
+    public void onGraphGenerationComplete(Graph graph) {
         pendingRequest = false;
-        candidateSolution = null;
-
-        if (solution == null || solution.isFailed()) {
+        if (graph == null) {
             handleGenerationFailure();
             return;
         }
-
-        flowFieldSolution = solution;
-        registeredStartCell = solution.getStartCell();
+        this.graph = graph;
         failureCount = 0;
         nextRetryTick = 0;
         setChanged();
-    }
-
-    public void onValidationComplete(Boolean valid) {
-        pendingRequest = false;
-
-        if (!valid) {
-            requestGenerationWithBackoff();
-        }
     }
 
     private void handleGenerationFailure() {
@@ -249,6 +160,7 @@ public class RoostBlockEntity extends BlockEntity {
             bat.moveTo(x, y, z, random.nextFloat() * 360F, 0F);
             bat.setResting(true);
             bat.setHome(home);
+            bat.setRoost(home);
             level.addFreshEntity(bat);
             spawned++;
         }
@@ -256,21 +168,9 @@ public class RoostBlockEntity extends BlockEntity {
         return spawned;
     }
 
-    public void offerSolution(FlowFieldSolution solution) {
-        if (pendingRequest) {
-            return;
-        }
-        if (flowFieldSolution != null && !flowFieldSolution.isFailed()) {
-            return;
-        }
-        candidateSolution = solution;
-    }
-
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (registeredStartCell != null) {
-            FlowFieldManager.getInstance().unregisterRoost(this);
-        }
+        Manager.getInstance().unregisterRoost(this);
     }
 }
