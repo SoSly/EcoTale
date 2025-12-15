@@ -1,6 +1,7 @@
 package org.sosly.ecotale.navigation;
 
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -201,6 +202,18 @@ public class Manager {
 
     public void unregisterRoost(RoostBlockEntity roost) {
         activeRoosts.remove(roost.getBlockPos());
+    }
+
+    public Map<BlockPos, Boolean> getRoostStatuses() {
+        Map<BlockPos, Boolean> statuses = new HashMap<>();
+        for (Map.Entry<BlockPos, WeakReference<RoostBlockEntity>> entry : activeRoosts.entrySet()) {
+            RoostBlockEntity roost = entry.getValue().get();
+            if (roost != null) {
+                boolean hasGraph = roost.getGraph() != null;
+                statuses.put(entry.getKey(), hasGraph);
+            }
+        }
+        return statuses;
     }
 
     public void onBlockChange(BlockPos changedPos, Level level) {

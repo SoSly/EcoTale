@@ -16,10 +16,12 @@ public class ClientEvents {
         }
 
         GraphDebugRenderer.render(event.getPoseStack());
+        RoostDebugRenderer.render(event.getPoseStack());
     }
 
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         GraphDebugRenderer.clear();
+        RoostDebugRenderer.clear();
     }
 }
