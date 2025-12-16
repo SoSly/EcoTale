@@ -10,12 +10,15 @@ import org.sosly.ecotale.client.RoostDebugRenderer;
 
 public class RoostDebugPacket {
     private final Map<BlockPos, Boolean> roostStatuses;
+    private final boolean isToggle;
 
-    public RoostDebugPacket(Map<BlockPos, Boolean> roostStatuses) {
+    public RoostDebugPacket(Map<BlockPos, Boolean> roostStatuses, boolean isToggle) {
         this.roostStatuses = roostStatuses;
+        this.isToggle = isToggle;
     }
 
     public void encode(FriendlyByteBuf buf) {
+        buf.writeBoolean(isToggle);
         buf.writeVarInt(roostStatuses.size());
         for (Map.Entry<BlockPos, Boolean> entry : roostStatuses.entrySet()) {
             buf.writeBlockPos(entry.getKey());
@@ -24,6 +27,7 @@ public class RoostDebugPacket {
     }
 
     public static RoostDebugPacket decode(FriendlyByteBuf buf) {
+        boolean isToggle = buf.readBoolean();
         int count = buf.readVarInt();
         Map<BlockPos, Boolean> statuses = new HashMap<>();
         for (int i = 0; i < count; i++) {
@@ -31,10 +35,14 @@ public class RoostDebugPacket {
             boolean hasGraph = buf.readBoolean();
             statuses.put(pos, hasGraph);
         }
-        return new RoostDebugPacket(statuses);
+        return new RoostDebugPacket(statuses, isToggle);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
-        RoostDebugRenderer.toggle(roostStatuses);
+        if (isToggle) {
+            RoostDebugRenderer.toggle(roostStatuses);
+        } else {
+            RoostDebugRenderer.update(roostStatuses);
+        }
     }
 }

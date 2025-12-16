@@ -41,7 +41,6 @@ public class RoostBlockEntity extends BlockEntity implements IGraphProvider {
         if (level == null || level.isClientSide()) {
             return;
         }
-        Manager.getInstance().registerRoost(this);
         if (graph == null && !pendingRequest) {
             requestGraphGeneration();
         }
@@ -168,9 +167,4 @@ public class RoostBlockEntity extends BlockEntity implements IGraphProvider {
         return spawned;
     }
 
-    @Override
-    public void setRemoved() {
-        super.setRemoved();
-        Manager.getInstance().unregisterRoost(this);
-    }
 }

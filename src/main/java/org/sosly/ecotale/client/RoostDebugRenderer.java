@@ -45,6 +45,12 @@ public final class RoostDebugRenderer {
         }
     }
 
+    public static void update(Map<BlockPos, Boolean> roostStatuses) {
+        if (enabled) {
+            activeRoosts = new HashMap<>(roostStatuses);
+        }
+    }
+
     public static void clear() {
         enabled = false;
         activeRoosts.clear();
