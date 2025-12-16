@@ -16,20 +16,21 @@ This specification covers the graph data structures, generation algorithm, cachi
 
 A navigation cell representing a cubic region of the world with routing information.
 
-**What it represents:** A 4×4×4 block region that serves as a node in the navigation graph. Each cell contains a navigable waypoint (hub) and knows how to route toward any destination in the graph.
+**What it represents:** A 4×4×4 block region that serves as a node in the navigation graph. Each cell knows how to route toward any destination by specifying which hub to visit next.
 
 **Shape:**
 
 - **bounds** — Axis-aligned bounding box defining the cell's 4×4×4 block region.
-- **hub** — A specific air block within the cell that serves as the navigation waypoint.
-- **paths** — A map from destination hub positions to next hub positions. For each destination the graph knows about, this map stores which hub to visit next. A null value means this cell contains the destination (you've arrived).
+- **paths** — A map from destination hub positions to next hub positions. For each destination the graph knows about, this map stores which hub to visit next. The next hub is in a neighboring cell along the route. A null value means this cell contains the destination (you've arrived).
+
+**Hubs:** A cell's hubs are not stored explicitly. They are the positions that neighboring cells' paths point to within this cell's bounds. A cell may have multiple hubs if different routes through it require different waypoints (e.g., entering from west vs entering from east).
 
 **Invariants:**
 
-- The hub is always an air block within the cell's bounds.
-- The hub has line-of-sight to the entry point from which the cell was discovered (which connects to the parent cell's hub via the boundary crossing).
-- Every destination in the graph appears as a key in the paths map.
-- Following the path entries from any cell eventually reaches the destination (no cycles, no dead ends).
+- Every hub (any position appearing as a nextHop that falls within this cell's bounds) is an air block.
+- Every hub has line-of-sight to both the boundary crossing from which it is approached AND the boundary crossing toward which it exits. This enables the entity to fly in, hit the hub, and fly out.
+- For each destination that has a path entry, following path entries eventually reaches that destination (no cycles, no dead ends).
+- A cell may have path entries for only some destinations if cave geometry prevents valid routes to others. Missing entries mean "no route exists."
 
 ### Graph
 
@@ -41,7 +42,7 @@ A complete navigation solution covering all reachable cells and all known destin
 
 - **id** — The BlockPos of the origin this graph was generated for. Serves as the unique identifier.
 - **entityType** — The type of entity this graph was generated for. Must implement `IFlyingMob`. Passability checks during generation use this entity's dimensions, so a graph generated for bats may have paths a larger flying creature cannot traverse.
-- **cells** — A map from hub positions to Cell objects. Keyed by hub position for O(1) lookup during navigation.
+- **cells** — A map from cell bounds min corner to Cell objects. Given any position, the cell key is computed directly: `floor(coord / 4) * 4` for each axis.
 - **destinations** — The set of all destination hub positions (the GraphStart hub plus all GraphExit hubs).
 - **graphStart** — The hub position of the cell containing or beneath the origin. This is the "home" destination.
 - **graphExits** — The set of hub positions for cells that serve as cave exits. These are "outside" destinations.
@@ -50,7 +51,7 @@ A complete navigation solution covering all reachable cells and all known destin
 
 - The graphStart is always in the destinations set.
 - All graphExits are in the destinations set.
-- Every cell in the graph has a route entries for every destination.
+- Cells may have path entries for some destinations but not others (see Phase 5: Incomplete paths).
 - The graph contains all cells discovered during BFS, not just cells on the shortest path.
 - All passability checks used the entityType's dimensions during generation.
 
@@ -69,16 +70,16 @@ Graph {
 
 Cell {
     boundsMin: long                    // packed BlockPos of min corner
-    boundsMax: long                    // packed BlockPos of max corner
-    hub: long                          // packed BlockPos
-    paths: list<Link>
+    paths: list<Path>                  // routing table entries
 }
 
-Link {
+Path {
     destination: long                  // packed BlockPos of destination hub
     nextHop: long                      // packed BlockPos of next hub, or 0 if arrived
 }
 ```
+
+Cell bounds max corner is not serialized—it is computed as `boundsMin + (3,3,3)` since all cells are 4×4×4.
 
 The `destinations` set is not serialized—it is reconstructed from `graphStart` and `graphExits` on load.
 
@@ -124,24 +125,24 @@ Generation explores the cave from the origin, discovers all reachable cells and 
 
 The origin block may be placed against a ceiling or wall. The algorithm must find a nearby cell where navigation can begin.
 
-1. Check if the origin's own cell contains a reachable hub.
-2. If not, check adjacent cells.
+1. Check if the origin's own cell contains navigable air space with at least one passable boundary to an adjacent cell.
+2. If not, check adjacent cells for the same criteria.
 3. If no navigable starting point exists, generation fails.
 
-The hub of the starting cell becomes the graphStart destination.
+The start cell's hub is discovered using single-boundary hub discovery (see Hub Discovery: For destination cells). The hub only needs line-of-sight to one boundary crossing since entities arrive here, they don't pass through. This hub becomes the graphStart destination.
 
 #### Phase 2: Discover all reachable cells
 
 Expand outward from the start cell using breadth-first search. Do not stop at the first exit—continue until all reachable cells are discovered.
 
 1. Maintain a queue of cells to explore and a map of visited cells.
-2. For each cell, find its hub and check passability to neighbors.
+2. For each cell, check boundary passability to neighbors (see Cell Passability: Liberal Exploration).
 3. Record the parent cell for each discovered cell (needed for path building).
-4. Record bidirectional adjacency: when a cell connects to a neighbor, add each to the other's neighbor list. This temporary structure is needed for Phase 5.
+4. Record bidirectional adjacency: when a cell connects to a neighbor, add each to the other's neighbor list. Also record which boundary crossing position connects them. This temporary structure is needed for Phase 5.
 5. Mark cells that contain exits (air blocks with sky access) but continue exploring.
 6. Stop when: the queue is empty, or search bounds are exceeded, or timeout occurs.
 
-**Search bounds:** Generation searches up to 128 blocks from the origin, measured using Minecraft's `dist3d` (Euclidean distance). Before adding a cell to the BFS queue, check that its hub position is within range.
+**Search bounds:** Generation searches up to 128 blocks from the origin, measured using Minecraft's `dist3d` (Euclidean distance). Before adding a cell to the BFS queue, check that the cell's center is within range.
 
 **Chunk loading:** Generation works with whatever chunks are currently loaded. If some chunks within the search radius are unloaded, those areas are simply not explored. This is acceptable—block changes trigger regeneration anyway, so missed exits will be discovered when those chunks load and cause block update events.
 
@@ -154,7 +155,7 @@ For each cell identified as an exit during Phase 2:
 1. From the exit cell, extend directly upward (+Y).
 2. For each extension cell, check if it is "fully outside."
 3. If not fully outside, continue extending upward.
-4. The first fully-outside cell's hub becomes a graphExit destination.
+4. The first fully-outside cell becomes an exit cell. Its hub is discovered using single-boundary hub discovery (see Hub Discovery: For destination cells)—it only needs line-of-sight to one boundary crossing since entities arrive here when exiting. This hub becomes a graphExit destination.
 
 **Extension direction:** Always +Y (upward). Exit cells have sky access by definition, so extending upward will eventually reach open air. This handles the common case of vertical cave openings. Horizontal cave mouths (opening into a cliff face) will still work—the extension rises above the terrain until clear.
 
@@ -174,29 +175,44 @@ Collect all destination hubs:
 
 #### Phase 5: Build path tables
 
-For each cell in the graph, for each destination:
+For each destination, run a BFS over the adjacency graph starting from the destination cell. For each cell visited during BFS, attempt to build a path entry pointing toward that destination.
 
-1. If this cell's hub equals the destination, store null (arrived).
-2. Otherwise, trace toward the destination using parent relationships from BFS.
-3. Store the next hub along that path.
+**Algorithm for each destination:**
 
-**Path tracing approach:** BFS recorded parent relationships pointing toward the start. For the graphStart destination, following parents directly gives the path. For graphExit destinations, we need the reverse direction.
+1. Start BFS from the destination cell. Mark it as visited with path entry = null (arrived).
+2. For each cell C visited, examine its adjacent cells.
+3. For each adjacent cell A not yet visited:
+   - Let Q = the boundary crossing from A to C (recorded during Phase 2).
+   - Let R = the boundary crossing from C toward the next cell on the path to destination (from C's already-computed path entry). For the destination cell itself, there is no R.
+   - Attempt hub discovery in C: find a hub with LOS to both Q and R.
+   - If hub discovery succeeds: record A's path entry as (destination → discovered hub in C). Mark A as visited.
+   - If hub discovery fails: try alternative routes (see below).
+4. Continue until BFS completes or all reachable cells have path entries.
 
-**Recommended approach:** Run a BFS from each exit over the already-discovered graph. For each cell visited, record "next hop toward this exit." This is O(cells × exits).
+**Alternative path algorithm:**
 
-Note: The reverse BFS requires knowing which cells connect to which. During the initial BFS (Phase 2), track adjacency relationships as a temporary working structure. Use this for the reverse passes in Phase 5, then discard it—once paths are built, adjacency is no longer needed.
+When the direct route from A through C fails hub discovery, search for an alternative path:
 
-The result must be: for any cell and any destination, paths.get(destination) returns the next hub toward that destination.
+1. Run a secondary BFS from A over the adjacency graph, looking for any cell that already has a valid path entry for this destination.
+2. For each candidate route found, attempt hub discovery for the A→X transition (where X is the first cell on the alternative path).
+3. Use the first alternative that succeeds hub discovery.
+4. If no alternative works, A has no path entry for this destination. This is acceptable—the cell remains in the graph but cannot route to this specific destination.
+
+**Complexity:** O(cells × destinations) for the primary BFS passes, with additional work for alternative path searches when routes fail. In practice, most routes succeed on the first try.
+
+**Incomplete paths:** A cell may have path entries for some destinations but not others. This occurs when cave geometry prevents any valid route. The cell remains in the graph—an entity at that position can still navigate to destinations it CAN reach, and the entity AI handles missing path entries gracefully.
+
+**Result:** For cells that have a path entry, following entries eventually reaches the destination. Cells without a path entry for a destination cannot reach it through this graph.
 
 ### Hub Discovery
 
-Each cell needs a hub—a specific air block that serves as the navigation waypoint.
+Hubs are discovered when establishing connectivity between cells. A hub serves as a waypoint for a specific route through a cell—it must have line-of-sight to both the entry boundary (where the entity comes from) and the exit boundary (where the entity goes next).
 
-**Goal:** Given a cell, find an air block within it that has line-of-sight to the entry point (the position from which the cell was reached during BFS).
+**Goal:** Given a cell with an entry boundary crossing Q and an exit boundary crossing R, find an air block within the cell that has line-of-sight to both Q and R.
 
 **Discovery procedure:**
 
-1. Check the cell's center block first. If it is air and has line-of-sight to the entry point, use it as the hub.
+1. Check the cell's center block first. If it is air and has line-of-sight to both Q and R, use it as the hub.
 2. If the center fails, search in expanding cubic shells around the center:
    - Shell 1: all blocks at distance 1 from center (up to 26 positions)
    - Shell 2: all blocks at distance 2 from center
@@ -205,24 +221,28 @@ Each cell needs a hub—a specific air block that serves as the navigation waypo
 4. For each position, check:
    - The position is within cell bounds.
    - The position is air.
-   - The position has line-of-sight to the entry point.
+   - The position has line-of-sight to Q (entry boundary).
+   - The position has line-of-sight to R (exit boundary).
 5. Use the first position that passes all checks.
 
-**For the start cell:** The entry point is the origin position.
+**When hub discovery runs:** During path table construction (Phase 5), when determining the route from cell A through cell B toward a destination. The entry boundary Q is the crossing from A to B. The exit boundary R is the crossing from B toward the next cell on the path.
 
-**For subsequent cells:** The entry point is the boundary crossing position from which this cell was reached during BFS.
+**Multiple hubs:** A cell may accumulate multiple hubs if different routes through it require different waypoints. For example, a route entering from the west and exiting east might use hub H1, while a route entering from the north and exiting south might use hub H2. This is expected and correct.
 
-**Failure:** If no position passes all checks, the cell has no navigable hub and is not added to the graph.
+**For destination cells:** Cells containing graphStart or graphExit only need line-of-sight to the entry boundary (there is no exit—the entity arrives). Use the simpler single-boundary check for these.
+
+**Failure:** If no position has line-of-sight to both boundaries, the route through this cell is not viable. The path must use a different cell or the destination is unreachable via this path.
 
 ### Cell Passability
 
-Two adjacent cells are passable if an entity of the graph's entityType can travel between them.
+Cell passability is checked in two phases: liberal exploration during BFS, then strict validation during path construction.
 
-**Requirements:**
+#### During BFS (Phase 2): Liberal Exploration
 
-1. Both cells have navigable hubs.
-2. There exists sufficient clearance on the shared boundary face for the entity's dimensions.
-3. The boundary crossing has line-of-sight to both cells' hubs, accounting for entity size.
+Two adjacent cells are considered passable for exploration if:
+
+1. There exists sufficient clearance on the shared boundary face for the entity's dimensions.
+2. The destination cell contains navigable air space.
 
 **Boundary checking procedure:**
 
@@ -232,13 +252,18 @@ The shared face between 4×4×4 cells is 4×4 = 16 blocks. Check in this order:
 2. Check the four corner blocks of the face.
 3. If none of the 5 quick checks pass, check remaining blocks exhaustively.
 
-For each boundary block:
+For each boundary block, verify sufficient clearance exists for the entity's dimensions. If any boundary position passes, record the cells as adjacent and store the boundary crossing position.
 
-1. Verify sufficient clearance exists for the entity's dimensions.
-2. Raycast from source hub to boundary, using the entity's hitbox—must be unobstructed.
-3. Raycast from boundary to destination hub, using the entity's hitbox—must be unobstructed.
+**Why liberal:** At BFS time, we don't know the full route through each cell. A cell might be traversable via one path (west→east) but not another (north→south). We explore everything and validate specific routes later.
 
-If any boundary position passes all checks, the cells are passable.
+#### During Path Construction (Phase 5): Strict Validation
+
+When building a specific route A→B→C, validate that:
+
+1. A valid hub exists in B with line-of-sight to both the A-B boundary crossing AND the B-C boundary crossing.
+2. The entity can physically fly from the A-B crossing to the hub, and from the hub to the B-C crossing.
+
+If no valid hub can be found, this specific route fails. The algorithm tries alternative paths through the adjacency graph. If no route works, cell A has no path entry for the destination via B.
 
 **Line-of-sight:** Raycasts should account for entity dimensions, not just point-to-point visibility. An entity that cannot physically fit through a passage should not have that passage marked as passable.
 
@@ -246,22 +271,31 @@ If any boundary position passes all checks, the cells are passable.
 
 Entities query the graph to get their next waypoint.
 
-**Entry (once, when entity starts navigating):**
+**Cell lookup (O(1)):**
 
-1. Linear scan over cells to find which one contains the entity's current position.
-2. Entity stores that cell's hub as its current target.
+Given any position, compute the cell key directly:
 
-The linear scan is O(n) where n is the number of cells, but n is bounded by the 128-block search radius—typically a few hundred cells at most. This is acceptable for a one-time lookup when navigation begins.
+```
+cellKey.x = floor(pos.x / 4) * 4
+cellKey.y = floor(pos.y / 4) * 4
+cellKey.z = floor(pos.z / 4) * 4
+```
 
-**Per-tick navigation (O(1)):**
+Look up `cellKey` in the cells map. If present, you have the cell. No iteration required.
 
-1. Look up current hub in the cells map.
-2. Look up destination in that cell's paths map.
-3. If result is null, entity has arrived.
-4. Otherwise, result is the next hub—pathfind to it.
-5. When entity reaches the hub, repeat from step 1 with new position.
+**Navigation flow:**
 
-**Position not in graph:** If an entity's position doesn't match any cell, the query returns nothing. The entity's AI handles this gracefully (fallback navigation, wait for graph, etc.).
+1. Compute cell key from entity's current position.
+2. Look up cell in the cells map.
+3. Look up destination in that cell's paths map.
+4. If result is null, entity has arrived.
+5. If no entry exists for the destination, no route exists from this cell. Entity AI handles this gracefully.
+6. Otherwise, result is the next hub—fly to it.
+7. When entity reaches the hub, repeat from step 1 with new position.
+
+**Position not in graph:** If the computed cell key has no entry in the cells map, the position is outside the graph. The entity's AI handles this gracefully (fallback navigation, wait for graph, etc.).
+
+**No route to destination:** If the cell exists but has no path entry for the requested destination, no valid route was found during generation. The entity's AI handles this gracefully (try a different exit, wait, etc.).
 
 ### Change-Triggered Refresh
 
@@ -341,22 +375,24 @@ Debug visualization renders the graph structure for development and troubleshoot
 
 **Hub visualization:**
 
-- Purple boxes marking each cell's hub position
+- Purple boxes marking hub positions
+
+Hubs are derived by collecting all `nextHop` positions from path entries and grouping them by which cell bounds they fall within. A cell may have multiple hubs rendered if different routes through it use different waypoints.
 
 **Path visualization (lines between hubs):**
 
 - Blue lines — Edges along paths toward the GraphStart destination
 - Orange lines — Edges along paths toward GraphExit destinations
 
-Each cell draws one blue line (to its next hop toward graphStart) and one orange line per exit (to its next hop toward each graphExit). Lines connect hub to hub, showing the actual graph edges.
+Each cell draws one blue line (to its next hop toward graphStart) and one orange line per exit (to its next hop toward each graphExit). Lines connect hub positions, showing the actual graph edges.
 
 ### Rendering Approach
 
 The debug renderer receives graph data via a debug packet and draws:
 
 1. For each cell: a colored wireframe box around the cell bounds
-2. For each cell: a small purple box at the hub position
-3. For each cell: lines from the hub to next hops for each destination
+2. For each hub: a small purple box at the hub position (hubs derived from path nextHop values)
+3. For each cell: lines from that cell to each of its next-hop hubs for each destination
 
 **Performance consideration:** Large caves may have many cells. Consider limiting render distance or allowing filtering by destination.
 
@@ -369,7 +405,9 @@ The debug packet transmits graph data from server to client for visualization.
 - Graph ID (origin position)
 - GraphStart hub position
 - List of GraphExit hub positions
-- For each cell: bounds, hub position, and next-hop positions for each destination
+- For each cell: bounds and path entries (destination → nextHop)
+
+Hubs are not transmitted separately—they are derived on the client by collecting unique nextHop positions.
 
 **Triggering:** Debug visualization is toggled via command. When the user requests visualization, the server reads the installed graph on the main thread and sends the packet. Packets are only constructed on-demand—there is no ongoing cost when visualization is disabled.
 
@@ -393,13 +431,13 @@ The debug packet transmits graph data from server to client for visualization.
 
 ### Correctness
 
-**Path completeness:** From any cell, following path entries for any destination eventually reaches that destination.
+**Path completeness:** For any cell that has a path entry for a destination, following those entries eventually reaches that destination.
 
 **No cycles:** Following path entries always makes progress toward the destination.
 
-**Hub validity:** Every hub is an air block with line-of-sight to at least one neighbor's hub.
+**Hub validity:** Every hub (any nextHop position in the graph) is an air block with line-of-sight to both its entry boundary crossing and exit boundary crossing. This is verified during construction; boundaries are not stored in the final graph, so post-hoc validation requires regeneration.
 
-**Destination coverage:** Every cell has path entries for every destination in the graph.
+**Partial destination coverage:** Cells may have path entries for some destinations but not others. Missing entries indicate no valid route exists due to cave geometry. This is correct behavior, not a bug.
 
 ### Performance
 

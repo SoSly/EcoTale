@@ -99,7 +99,7 @@ flowchart TB
 
 **Owns:**
 
-- Set of roost positions for the chunk
+- Zero or one roost position for the chunk
 - Serialization/deserialization of roost data
 
 **Does:**
@@ -155,11 +155,11 @@ All validation uses the existing navigation graph system. This ensures "can bats
 | Criterion | What It Checks | Why It Matters |
 |-----------|----------------|----------------|
 | Graph exists | Navigable air space from candidate | No graph = no navigation = uninhabitable |
-| Sky connectivity | Graph reaches sky within `maxCellsToSky` cells | Bats must be able to leave to forage |
-| Minimum size | Graph has at least `minGraphCells` cells | Colony needs room to exist |
-| Player distance | Candidate is `playerSafeDistance` blocks from active players | Prevents visible roost "pop-in" |
+| Sky connectivity | Graph reaches sky within maximum path length | Bats must be able to leave to forage |
+| Minimum size | Graph has sufficient navigable cells | Colony needs room to exist |
+| Player distance | Candidate is far enough from active players | Prevents visible roost "pop-in" |
 
-Threshold values are configurable and determined via playtesting, not pinned at the architecture level.
+Specific threshold values are determined via playtesting, not pinned at the architecture level.
 
 ### Emergent Biome Handling
 
@@ -180,7 +180,7 @@ This is emergent behavior from the validation criteria, not a hardcoded blacklis
 | Validation approach | Navigation graph | Same system bats use; guarantees habitability |
 | Biome restrictions | None (emergent) | Graph criteria naturally exclude problematic locations |
 | Storage mechanism | Chunk capability | Persists with chunk; simple query interface |
-| Candidate identification | Random sampling | Pick N random stone-with-air-below positions; evaluate until one passes or give up. Simpler than graph-first approach. |
+| Candidate identification | Random sampling | Sample ceiling positions until one validates or candidates exhausted. Simpler than graph-first approach. |
 | Placement density | At most 1 per chunk | Ceiling, not target. Spacing rules skip most chunks entirely if roost already exists within range. |
 | Graph generation | Async via existing worker pool | Uses nav graph system's threading model. 5-second timeout. Nothing blocks main thread. |
 
@@ -191,6 +191,7 @@ This is emergent behavior from the validation criteria, not a hardcoded blacklis
 - **Navigation Graph System** — Graph generation for validation
 - **Chunk Load Events** — Trigger for placement
 - **Colony Health Architecture** — Colony initialization after placement
+- **Ceiling Detection Utility** — Shared logic for identifying valid hanging positions (also used by bat AI for choosing sleep spots)
 
 ### Provides To
 
