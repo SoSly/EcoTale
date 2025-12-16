@@ -1,7 +1,7 @@
 ---
 level: 5
 parent: "[[Navigation Graph Specification]]"
-status: draft
+status: implemented
 ---
 
 This build plan migrates from the existing Flow Field implementation to the Navigation Graph design specified in the parent document. The old flow field classes will be deleted and replaced, but significant portions of proven, working code will be adapted rather than rewritten from scratch.

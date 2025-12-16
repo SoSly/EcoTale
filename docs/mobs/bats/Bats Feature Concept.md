@@ -28,6 +28,7 @@ The player who discovers a bat colony near their base has found something valuab
 
 | System         | What It Is                                                          | Player Benefit                                                     |
 | -------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Natural Roosts | Colony anchor points placed in caves during worldgen                | Discoverable partnerships near your base                           |
 | AI Behavior    | Autonomous bat actions: foraging, roosting, visiting farms, fleeing | Bats feel alive; behavior communicates colony state                |
 | Guano          | Layered blocks that accumulate below roosts                         | Bone meal equivalent; crafts into brown dye; smelts into gunpowder |
 | Pollination    | Bats visit nearby farms at night                                    | Accelerated crop growth                                            |

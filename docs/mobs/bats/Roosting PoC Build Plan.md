@@ -1,7 +1,7 @@
 ---
 level: 5
 parent: "[[AI Behavior Architecture]]"
-status: draft
+status: abandoned
 ---
 
 This build plan implements the minimum roosting mechanics needed to run the Colony Size Aesthetics PoC. It is explicitly throwaway scaffolding—we expect to revisit and likely rewrite these systems after PoC results inform the design.

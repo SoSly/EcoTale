@@ -12,7 +12,7 @@ Bats are autonomous actors. They make decisions based on time of day, colony hea
 
 ```mermaid
 flowchart LR
-    RoostBlockEntity
+    RoostEntry["Roost Entry (Chunk Capability)"]
     EcoTaleBat
     Brain["MinecraftBrain"]
     MinecraftDayCycle["Minecraft Day/Night Cycle"]
@@ -26,7 +26,7 @@ flowchart LR
     ColonyHealth["Colony Health"]
 
     %% Navigation Graph
-    RoostBlockEntity -->|"generates/caches"| NavigationGraph
+    RoostEntry -->|"generates/caches"| NavigationGraph
 
     %% Daily Cycle
     MinecraftDayCycle -->|"current time"| Schedule
@@ -52,7 +52,7 @@ flowchart LR
 
     %% Colony Communication
     EcoTaleBat <-->|"queries/reports"| ColonyComms
-    ColonyComms -->|"stored on"| RoostBlockEntity
+    ColonyComms -->|"stored in"| RoostEntry
 ```
 
 ## Subsystems
@@ -92,7 +92,7 @@ Responsible for guiding bats through cave systems using precomputed path data.
 - Supporting multiple exits per cave (bats can leave via any discovered exit)
 - Providing next-waypoint lookups for any destination (roost or any exit)
 - Running generation off the main thread via preemptible queue
-- Caching graphs on the roost for bat queries
+- Caching graphs in the roost entry for bat queries
 - Regenerating when block changes occur within the graph's radius
 
 **Open parameters:** Cell resolution, search bounds, refresh trigger sensitivity.
@@ -126,13 +126,13 @@ Responsible for bat actions at or near the roost during ROOST activity.
 
 ### Colony Communication
 
-Colony Communication is not a separate component—it's a pattern describing how bats share discovered resource locations. Storage lives on RoostBlockEntity; bats query and report via their HOME reference.
+Colony Communication is not a separate component—it's a pattern describing how bats share discovered resource locations. Storage lives in the roost entry (chunk capability); bats query and report via their HOME reference.
 
 **The pattern:**
 
 - **Discovery:** During foraging, bats detect crops and water sources within range
 - **Reporting:** Bats report discoveries to their home roost's knowledge store
-- **Storage:** RoostBlockEntity maintains a set of known resource locations with timestamps
+- **Storage:** Roost entry maintains a set of known resource locations with timestamps
 - **Query:** Bats query colony knowledge when selecting foraging destinations
 - **Expiration:** Stale entries expire when resources are removed or time elapses
 
@@ -161,8 +161,8 @@ Colony Communication is not a separate component—it's a pattern describing how
 **Does not:**
 
 - Own colony state (that's Colony Health)
-- Own navigation graph (cached on roost, queried by bat)
-- Own colony knowledge (stored on roost, queried by bat)
+- Own navigation graph (cached in roost entry, queried by bat)
+- Own colony knowledge (stored in roost entry, queried by bat)
 
 ### Minecraft Brain (vanilla system)
 
@@ -201,7 +201,7 @@ Brain ticks (vanilla)
 ```
 ExitCave behavior runs
     → queries HOME memory for roost position
-    → retrieves navigation graph from RoostBlockEntity
+    → retrieves navigation graph from roost entry (via chunk capability)
     → queries graph for next waypoint toward nearest exit
     → sets FLY_TARGET to that waypoint
     → navigator moves bat toward target
@@ -252,18 +252,18 @@ Bat dies (any cause)
 | AI system            | Brain over Goals           | Sensors for perception, memories for state, schedules for cycles |
 | Entity inheritance   | Extend vanilla Bat         | Passes instanceof checks, inherits sounds/visuals/hitbox         |
 | Activity count       | Two (ROOST, FORAGE)        | Simple; IS_OUTSIDE memory handles sub-phases within each         |
-| Graph ownership      | Cached on RoostBlockEntity | Bats query via HOME; avoids duplicating data per bat             |
-| Colony knowledge     | Stored on RoostBlockEntity | Colony-level concern; bats contribute and query                  |
+| Graph ownership      | Cached in roost entry      | Bats query via HOME; avoids duplicating data per bat             |
+| Colony knowledge     | Stored in roost entry      | Colony-level concern; bats contribute and query                  |
 | Stress response      | Behavior modification      | No separate "stressed" activity; existing behaviors check state  |
 | Feeding granularity  | Per-block, not per-farm    | Bats target individual farmland blocks; after feeding, a cooldown triggers before they get hungry again and pick another block |
-| Knowledge persistence | Persists with roost        | Colony knowledge survives chunk unloads; bats shouldn't have to rediscover resources every time the player walks away |
+| Knowledge persistence | Persists with chunk        | Colony knowledge survives chunk unloads; bats shouldn't have to rediscover resources every time the player walks away |
 
 ## Integration Points
 
 ### Depends On
 
 - **Colony Health** — provides health state that affects behavior
-- **RoostBlockEntity** — stores navigation graph and colony knowledge
+- **Chunk Capability (Roost Entry)** — stores navigation graph and colony knowledge
 - **Minecraft Brain System** — provides sensors, memories, activities, behaviors
 - **Minecraft Navigator** — handles local pathfinding to waypoints
 

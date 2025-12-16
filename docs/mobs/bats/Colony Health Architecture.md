@@ -6,17 +6,20 @@ status: review
 
 The Colony Health system manages bat population and stress for a single roost. It serves the Bats feature concept by providing the autonomous ecology that players observe and respond to.
 
-A colony is defined by its roost block. One roost = one colony. The roost block acts as an anchor point; bats sleep on nearby surfaces within range, not necessarily on the block itself.
+A colony is defined by its roost position. One roost = one colony. The roost position acts as an anchor point; bats sleep on nearby surfaces within range, not necessarily at the position itself. Roost positions are stored in a chunk capability; see Natural Roosts Architecture for placement details.
 
 ## System Diagram
 
 ```mermaid
 flowchart TB
-    subgraph Roost["RoostBlockEntity"]
-        stress["stress: float (0.0–1.0)"]
-        decayFloor["decayFloor: float"]
-        bats["bats: Set&lt;UUID&gt;"]
-        targetSize["targetSize: int"]
+    subgraph ChunkCap["Chunk Capability"]
+        subgraph RoostEntry["Roost Entry"]
+            position["position: BlockPos"]
+            stress["stress: float (0.0–1.0)"]
+            decayFloor["decayFloor: float"]
+            bats["bats: Set&lt;UUID&gt;"]
+            targetSize["targetSize: int"]
+        end
     end
 
     subgraph Sources["Stress Sources"]
@@ -93,12 +96,13 @@ Responsible for keeping actual bat population aligned with target size.
 
 ## Component Responsibilities
 
-### RoostBlockEntity
+### Roost Entry (Chunk Capability)
 
-**Purpose:** Single source of truth for colony state—stress level and bat population.
+**Purpose:** Single source of truth for colony state—stress level and bat population. Stored in the chunk capability alongside the roost position.
 
 **Owns:**
 
+- `position` — BlockPos identifying the roost location
 - `stress` — normalized float (0.0 = no stress, 1.0 = maximum stress)
 - `decayFloor` — minimum stress level; lowered by active investment
 - `bats` — set of UUIDs for tracked bat entities
@@ -117,10 +121,11 @@ Responsible for keeping actual bat population aligned with target size.
 
 - Make decisions about individual bat behavior (that's Bat AI)
 - Track where individual bats are sleeping (bats choose their own spots)
+- Own a physical block (roosts are coordinates, not blocks)
 
 ### Stress Sources
 
-Stress sources are not a separate component—RoostBlockEntity detects them directly. Architecturally, there are three categories:
+Stress sources are not a separate component—the roost entry detects them directly. Architecturally, there are three categories:
 
 - **Proximity** — players within detection range
 - **Light** — light level at or near the roost
@@ -132,17 +137,21 @@ Stress sources are not a separate component—RoostBlockEntity detects them dire
 
 ### Bat Boxes
 
-Bat boxes are craftable roosts. Architecturally, they are the same as natural roosts — same RoostBlockEntity, same stress mechanics, same population tracking. The differences are configuration, not structure:
+Bat boxes are craftable roosts. Architecturally, they use the same chunk capability system as natural roosts—same roost entry structure, same stress mechanics, same population tracking. When a player places a bat box block, the block registers a roost entry in the chunk capability at its position.
+
+The differences from natural roosts are configuration, not structure:
 
 - **Reduced stress sensitivity** — player proximity contributes less stress
 - **Lower maximum capacity** — smaller colonies than natural roosts
-- **No worldgen placement** — players craft and place them
+- **Player-placed** — bat box block tells chunk capability to register a roost
 
 This means bat boxes trade peak output for stability. A natural roost with careful stewardship outproduces a bat box, but a bat box is more forgiving of player activity nearby.
 
+The bat box block itself may have a BlockEntity for visual state or displaying colony info, but the *roost* is the capability entry. Colony Health talks to the capability, not the block.
+
 ### Population Tracking
 
-Population tracking is internal to RoostBlockEntity, not a separate component. Key architectural decisions:
+Population tracking is internal to the roost entry, not a separate component. Key architectural decisions:
 
 - **Individual tracking:** Colony tracks bats by UUID, not just a count. This enables accurate population queries and per-bat stress contribution on death.
 - **Death notification:** Bats notify their home colony on death, OR a Forge event listener catches death and updates the colony. Polling is explicitly forbidden.
@@ -153,7 +162,7 @@ Population tracking is internal to RoostBlockEntity, not a separate component. K
 ### Stress Accumulation
 
 ```
-RoostBlockEntity ticks
+Roost entry ticks (via chunk capability tick or level tick)
     → detects stress sources (players, light, noise events)
     → accumulates stress (clamped to 0.0–1.0)
     → stress decays when no sources present
@@ -215,10 +224,10 @@ Colony health manifests as discrete observable states, with transitions driven b
 
 ### Depends On
 
-- **Block Registry** — RoostBlock must be registered
+- **Chunk Capability System** — roost entries stored in chunk capabilities
+- **Natural Roosts Architecture** — provides roost positions during chunk load
 - **Entity Registry** — EcoTaleBat must be registered
 - **Forge Event Bus** — for death notification (if using event approach)
-- **Worldgen** — places roost blocks in caves
 
 ### Provides To
 
@@ -235,6 +244,6 @@ Colony health manifests as discrete observable states, with transitions driven b
 
 ## Open Questions
 
-1. **Roost frequency vs. colony size** — Should worldgen place fewer large-capacity roosts or more small-capacity roosts? This affects performance control, visual clarity, and gameplay feel. Also determines whether colony spacing rules are needed — frequent small roosts naturally avoid overlap; infrequent large roosts may need enforced minimum distance. Needs POC investigation.
+1. **Stress exposure interface** — What does Colony Health expose to downstream systems—the raw stress value, the discrete state, or both? This affects whether consumers (Guano, Pollination, Bat AI) can implement continuous scaling or only threshold-triggered behavior.
 
-2. **Stress exposure interface** — What does Colony Health expose to downstream systems—the raw stress value, the discrete state, or both? This affects whether consumers (Guano, Pollination, Bat AI) can implement continuous scaling or only threshold-triggered behavior.
+2. **Ceiling mining behavior** — When the ceiling block at a roost position is mined, how does the colony respond? Relocate to nearby ceiling? Degrade colony health? The roost entry persists in the capability regardless, but the colony behavior needs definition.
