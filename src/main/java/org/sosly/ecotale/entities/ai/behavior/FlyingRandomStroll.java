@@ -1,11 +1,13 @@
 package org.sosly.ecotale.entities.ai.behavior;
 
 import com.google.common.collect.ImmutableMap;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.phys.Vec3;
 import org.sosly.ecotale.api.entities.IFlyingMob;
 import org.sosly.ecotale.entities.ai.AIConstants;

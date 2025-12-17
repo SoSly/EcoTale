@@ -46,54 +46,71 @@ public class Graph {
     }
 
     /**
-     * Looks up a cell by its hub position.
+     * Looks up a cell by world position with O(1) grid key computation.
      *
-     * @param hub the hub position to look up
-     * @return the cell with the given hub, or null if not found
+     * @param worldPos any position to look up
+     * @return the cell containing the position, or null if not in graph
      */
     @Nullable
-    public Cell getCell(BlockPos hub) {
-        return cells.get(hub);
+    public Cell getCellAt(BlockPos worldPos) {
+        int minX = Math.floorDiv(worldPos.getX(), Cell.RESOLUTION) * Cell.RESOLUTION;
+        int minY = Math.floorDiv(worldPos.getY(), Cell.RESOLUTION) * Cell.RESOLUTION;
+        int minZ = Math.floorDiv(worldPos.getZ(), Cell.RESOLUTION) * Cell.RESOLUTION;
+        BlockPos gridKey = new BlockPos(minX, minY, minZ);
+        return cells.get(gridKey);
     }
 
     /**
      * Finds the cell whose bounds contain the given position.
-     *
-     * <p>This performs a linear scan over all cells. Use sparingly, typically
-     * only when an entity first begins navigation or enters the graph from
-     * outside.</p>
      *
      * @param pos the position to search for
      * @return the containing cell, or null if the position is not in any cell
      */
     @Nullable
     public Cell findContainingCell(BlockPos pos) {
-        for (Cell cell : cells.values()) {
-            if (cell.contains(pos)) {
-                return cell;
-            }
-        }
-        return null;
+        return getCellAt(pos);
     }
 
     /**
-     * Returns the next hop toward a destination from a current hub.
+     * Returns the next hop toward a destination from a current position.
      *
-     * <p>This is the primary navigation query. Given the entity's current cell hub
-     * and desired destination, it returns the next hub to path toward.</p>
+     * <p>This is the primary navigation query. Given the entity's current position
+     * and desired destination, it returns the next hop to path toward.</p>
      *
-     * @param currentHub the hub position of the cell the entity is currently in
-     * @param destination the target destination hub
-     * @return the next hop hub position, or null if already at destination or path not found
+     * @param currentPos the position the entity is currently at
+     * @param destination the target destination
+     * @return the next hop position, or null if already at destination or path not found
      */
     @Nullable
-    public BlockPos getNextHop(BlockPos currentHub, BlockPos destination) {
-        Cell cell = getCell(currentHub);
+    public BlockPos getNextHop(BlockPos currentPos, BlockPos destination) {
+        Cell cell = getCellAt(currentPos);
         if (cell == null) {
             return null;
         }
 
         return cell.getPaths().get(destination);
+    }
+
+    /**
+     * Returns all hub positions within a cell.
+     *
+     * <p>Hubs are implicit - a cell has a hub at any position that appears as a
+     * nextHop in another cell's path entries. This allows cells to have multiple
+     * hubs when different routes converge at different waypoints.</p>
+     *
+     * @param cell the cell to find hubs for
+     * @return the set of hub positions within the cell, empty if no paths point to it
+     */
+    public Set<BlockPos> getHubsForCell(Cell cell) {
+        Set<BlockPos> hubs = new HashSet<>();
+        for (Cell other : cells.values()) {
+            for (BlockPos nextHop : other.getPaths().values()) {
+                if (nextHop != null && cell.contains(nextHop)) {
+                    hubs.add(nextHop);
+                }
+            }
+        }
+        return hubs;
     }
 
     public BlockPos getId() {
@@ -169,7 +186,7 @@ public class Graph {
                     LOGGER.warn("Failed to load cell at index {}", i);
                     return null;
                 }
-                cells.put(cell.getHub(), cell);
+                cells.put(cell.getGridKey(), cell);
             }
 
             Builder builder = builder(id, entityType);
@@ -192,15 +209,16 @@ public class Graph {
         CompoundTag cellTag = new CompoundTag();
         AABB bounds = cell.getBounds();
         cellTag.putLong("boundsMin", new BlockPos((int) bounds.minX, (int) bounds.minY, (int) bounds.minZ).asLong());
-        cellTag.putLong("boundsMax", new BlockPos((int) bounds.maxX, (int) bounds.maxY, (int) bounds.maxZ).asLong());
-        cellTag.putLong("hub", cell.getHub().asLong());
 
         ListTag pathsList = new ListTag();
         for (Map.Entry<BlockPos, BlockPos> entry : cell.getPaths().entrySet()) {
             CompoundTag linkTag = new CompoundTag();
             linkTag.putLong("destination", entry.getKey().asLong());
             BlockPos nextHop = entry.getValue();
-            linkTag.putLong("nextHop", nextHop == null ? 0L : nextHop.asLong());
+            linkTag.putBoolean("hasNextHop", nextHop != null);
+            if (nextHop != null) {
+                linkTag.putLong("nextHop", nextHop.asLong());
+            }
             pathsList.add(linkTag);
         }
         cellTag.put("paths", pathsList);
@@ -212,25 +230,30 @@ public class Graph {
     private static Cell loadCell(CompoundTag tag) {
         try {
             BlockPos boundsMin = BlockPos.of(tag.getLong("boundsMin"));
-            BlockPos boundsMax = BlockPos.of(tag.getLong("boundsMax"));
             AABB bounds = new AABB(
                 boundsMin.getX(),
                 boundsMin.getY(),
                 boundsMin.getZ(),
-                boundsMax.getX(),
-                boundsMax.getY(),
-                boundsMax.getZ()
+                boundsMin.getX() + Cell.RESOLUTION,
+                boundsMin.getY() + Cell.RESOLUTION,
+                boundsMin.getZ() + Cell.RESOLUTION
             );
 
-            BlockPos hub = BlockPos.of(tag.getLong("hub"));
-            Cell cell = new Cell(bounds, hub);
+            Cell cell = new Cell(bounds);
 
             ListTag pathsList = tag.getList("paths", Tag.TAG_COMPOUND);
             for (int i = 0; i < pathsList.size(); i++) {
                 CompoundTag linkTag = pathsList.getCompound(i);
                 BlockPos destination = BlockPos.of(linkTag.getLong("destination"));
-                long nextHopLong = linkTag.getLong("nextHop");
-                BlockPos nextHop = nextHopLong == 0L ? null : BlockPos.of(nextHopLong);
+                BlockPos nextHop;
+                if (linkTag.contains("hasNextHop")) {
+                    nextHop = linkTag.getBoolean("hasNextHop")
+                        ? BlockPos.of(linkTag.getLong("nextHop"))
+                        : null;
+                } else {
+                    long nextHopLong = linkTag.getLong("nextHop");
+                    nextHop = nextHopLong == 0L ? null : BlockPos.of(nextHopLong);
+                }
                 cell.setPath(destination, nextHop);
             }
 
@@ -273,7 +296,7 @@ public class Graph {
         }
 
         public Builder addCell(Cell cell) {
-            this.cells.put(cell.getHub(), cell);
+            this.cells.put(cell.getGridKey(), cell);
             return this;
         }
 

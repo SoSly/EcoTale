@@ -50,7 +50,7 @@ public class GraphGeneratorGameTest {
             verifyPathsTerminate(graph);
             verifyNoPathCycles(graph);
             verifyDestinationsIncludeStartAndExits(graph);
-            verifyHubsWithinBounds(graph);
+            verifyGridKeysAreConsistent(graph);
         });
     }
 
@@ -74,7 +74,7 @@ public class GraphGeneratorGameTest {
             for (BlockPos destination : destinations) {
                 if (!paths.containsKey(destination)) {
                     throw new GameTestAssertException(
-                        "Cell at " + cell.getHub() + " is missing path entry for destination " + destination
+                        "Cell at " + cell.getGridKey() + " is missing path entry for destination " + destination
                     );
                 }
             }
@@ -82,81 +82,81 @@ public class GraphGeneratorGameTest {
     }
 
     private void verifyPathsTerminate(Graph graph) {
-        Map<BlockPos, Cell> cells = graph.getCells();
         Set<BlockPos> destinations = graph.getDestinations();
 
-        for (Cell startCell : cells.values()) {
+        for (Cell startCell : graph.getCells().values()) {
             for (BlockPos destination : destinations) {
-                BlockPos current = startCell.getHub();
-                Set<BlockPos> visited = new HashSet<>();
+                BlockPos currentGridKey = startCell.getGridKey();
+                Set<BlockPos> visitedGridKeys = new HashSet<>();
 
-                while (current != null && !current.equals(destination)) {
-                    if (visited.contains(current)) {
-                        throw new GameTestAssertException(
-                            "Path from " + startCell.getHub() + " to " + destination
-                                + " contains a cycle at " + current
-                        );
-                    }
-
-                    visited.add(current);
-                    Cell currentCell = cells.get(current);
+                while (currentGridKey != null) {
+                    Cell currentCell = graph.getCellAt(currentGridKey);
                     if (currentCell == null) {
                         throw new GameTestAssertException(
-                            "Path from " + startCell.getHub() + " to " + destination
-                                + " references non-existent cell " + current
+                            "Path from " + startCell.getGridKey() + " to " + destination
+                                + " references non-existent cell at " + currentGridKey
                         );
                     }
+
+                    if (visitedGridKeys.contains(currentGridKey)) {
+                        throw new GameTestAssertException(
+                            "Path from " + startCell.getGridKey() + " to " + destination
+                                + " contains a cycle at " + currentGridKey
+                        );
+                    }
+                    visitedGridKeys.add(currentGridKey);
 
                     BlockPos nextHop = currentCell.getPaths().get(destination);
                     if (nextHop == null) {
-                        if (!current.equals(destination)) {
-                            throw new GameTestAssertException(
-                                "Path from " + startCell.getHub() + " to " + destination
-                                    + " terminates prematurely at " + current
-                            );
-                        }
                         break;
                     }
 
-                    current = nextHop;
-                }
+                    if (nextHop.equals(destination)) {
+                        return;
+                    }
 
-                if (!current.equals(destination)) {
-                    throw new GameTestAssertException(
-                        "Path from " + startCell.getHub() + " to " + destination
-                            + " does not reach destination (ended at " + current + ")"
-                    );
+                    Cell nextCell = graph.getCellAt(nextHop);
+                    if (nextCell == null) {
+                        throw new GameTestAssertException(
+                            "Path from " + startCell.getGridKey() + " to " + destination
+                                + " references non-existent next hop " + nextHop
+                        );
+                    }
+                    currentGridKey = nextCell.getGridKey();
                 }
             }
         }
     }
 
     private void verifyNoPathCycles(Graph graph) {
-        Map<BlockPos, Cell> cells = graph.getCells();
+        int maxPathLength = graph.getCells().size();
         Set<BlockPos> destinations = graph.getDestinations();
-        int maxPathLength = cells.size();
 
-        for (Cell startCell : cells.values()) {
+        for (Cell startCell : graph.getCells().values()) {
             for (BlockPos destination : destinations) {
-                BlockPos current = startCell.getHub();
+                BlockPos currentGridKey = startCell.getGridKey();
                 int pathLength = 0;
 
-                while (current != null && !current.equals(destination)) {
+                while (currentGridKey != null) {
                     pathLength++;
                     if (pathLength > maxPathLength) {
                         throw new GameTestAssertException(
-                            "Path from " + startCell.getHub() + " to " + destination
+                            "Path from " + startCell.getGridKey() + " to " + destination
                                 + " exceeds maximum length of " + maxPathLength + " (likely a cycle)"
                         );
                     }
 
-                    Cell currentCell = cells.get(current);
+                    Cell currentCell = graph.getCellAt(currentGridKey);
                     BlockPos nextHop = currentCell.getPaths().get(destination);
-                    if (nextHop == null) {
+                    if (nextHop == null || nextHop.equals(destination)) {
                         break;
                     }
 
-                    current = nextHop;
+                    Cell nextCell = graph.getCellAt(nextHop);
+                    if (nextCell == null) {
+                        break;
+                    }
+                    currentGridKey = nextCell.getGridKey();
                 }
             }
         }
@@ -182,15 +182,21 @@ public class GraphGeneratorGameTest {
         }
     }
 
-    private void verifyHubsWithinBounds(Graph graph) {
-        Map<BlockPos, Cell> cells = graph.getCells();
+    private void verifyGridKeysAreConsistent(Graph graph) {
+        for (Map.Entry<BlockPos, Cell> entry : graph.getCells().entrySet()) {
+            BlockPos mapKey = entry.getKey();
+            Cell cell = entry.getValue();
+            BlockPos cellGridKey = cell.getGridKey();
 
-        for (Cell cell : cells.values()) {
-            BlockPos hub = cell.getHub();
-
-            if (!cell.contains(hub)) {
+            if (!mapKey.equals(cellGridKey)) {
                 throw new GameTestAssertException(
-                    "Hub " + hub + " is not within cell bounds " + cell.getBounds()
+                    "Cell map key " + mapKey + " does not match cell gridKey " + cellGridKey
+                );
+            }
+
+            if (!cell.contains(cellGridKey)) {
+                throw new GameTestAssertException(
+                    "Cell gridKey " + cellGridKey + " is not within cell bounds " + cell.getBounds()
                 );
             }
         }

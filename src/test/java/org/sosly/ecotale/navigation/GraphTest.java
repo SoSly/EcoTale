@@ -27,8 +27,8 @@ class GraphTest {
     void findContainingCellReturnsCorrectCellWhenPositionIsInside() {
         BlockPos hub1 = new BlockPos(0, 0, 0);
         BlockPos hub2 = new BlockPos(8, 8, 8);
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub1)
@@ -45,7 +45,7 @@ class GraphTest {
     @Test
     void findContainingCellReturnsNullWhenPositionIsOutside() {
         BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+        Cell cell = Cell.fromWorldPosition(hub);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub)
@@ -59,7 +59,7 @@ class GraphTest {
     @Test
     void findContainingCellHandlesBoundaryPositionsCorrectly() {
         BlockPos hub = new BlockPos(2, 2, 2);
-        Cell cell = Cell.fromHubPosition(hub);
+        Cell cell = Cell.fromWorldPosition(hub);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub)
@@ -77,8 +77,8 @@ class GraphTest {
     void getNextHopReturnsCorrectNextHopForValidCellAndDestination() {
         BlockPos hub1 = new BlockPos(0, 0, 0);
         BlockPos hub2 = new BlockPos(8, 8, 8);
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
 
         cell1.setPath(hub2, hub2);
 
@@ -94,7 +94,7 @@ class GraphTest {
     @Test
     void getNextHopReturnsNullWhenAlreadyAtDestination() {
         BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+        Cell cell = Cell.fromWorldPosition(hub);
 
         cell.setPath(hub, null);
 
@@ -111,7 +111,7 @@ class GraphTest {
         BlockPos hub1 = new BlockPos(0, 0, 0);
         BlockPos hub2 = new BlockPos(8, 8, 8);
         BlockPos nonExistentHub = new BlockPos(100, 100, 100);
-        Cell cell1 = Cell.fromHubPosition(hub1);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub1)
@@ -126,7 +126,7 @@ class GraphTest {
         BlockPos hub1 = new BlockPos(0, 0, 0);
         BlockPos hub2 = new BlockPos(8, 8, 8);
         BlockPos unknownDestination = new BlockPos(100, 100, 100);
-        Cell cell1 = Cell.fromHubPosition(hub1);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub1)
@@ -143,10 +143,10 @@ class GraphTest {
         BlockPos hub3 = new BlockPos(16, 16, 16);
         BlockPos exit1 = new BlockPos(24, 24, 24);
 
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
-        Cell cell3 = Cell.fromHubPosition(hub3);
-        Cell exitCell = Cell.fromHubPosition(exit1);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+        Cell exitCell = Cell.fromWorldPosition(exit1);
 
         cell1.setPath(hub1, null);
         cell1.setPath(exit1, hub2);
@@ -174,7 +174,7 @@ class GraphTest {
         for (Cell cell : graph.getCells().values()) {
             for (BlockPos destination : expectedDestinations) {
                 assertTrue(cell.getPaths().containsKey(destination),
-                    "Cell at " + cell.getHub() + " missing path to " + destination);
+                    "Cell at " + cell.getGridKey() + " missing path to " + destination);
             }
         }
     }
@@ -185,9 +185,9 @@ class GraphTest {
         BlockPos hub2 = new BlockPos(8, 8, 8);
         BlockPos hub3 = new BlockPos(16, 16, 16);
 
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
-        Cell cell3 = Cell.fromHubPosition(hub3);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
 
         cell1.setPath(hub1, null);
         cell1.setPath(hub3, hub2);
@@ -230,10 +230,10 @@ class GraphTest {
         BlockPos hub3 = new BlockPos(16, 16, 16);
         BlockPos hub4 = new BlockPos(24, 24, 24);
 
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
-        Cell cell3 = Cell.fromHubPosition(hub3);
-        Cell cell4 = Cell.fromHubPosition(hub4);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+        Cell cell4 = Cell.fromWorldPosition(hub4);
 
         cell1.setPath(hub1, null);
         cell1.setPath(hub4, hub2);
@@ -290,9 +290,9 @@ class GraphTest {
         BlockPos exit1 = new BlockPos(8, 8, 8);
         BlockPos exit2 = new BlockPos(16, 16, 16);
 
-        Cell startCell = Cell.fromHubPosition(graphStart);
-        Cell exitCell1 = Cell.fromHubPosition(exit1);
-        Cell exitCell2 = Cell.fromHubPosition(exit2);
+        Cell startCell = Cell.fromWorldPosition(graphStart);
+        Cell exitCell1 = Cell.fromWorldPosition(exit1);
+        Cell exitCell2 = Cell.fromWorldPosition(exit2);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(graphStart)
@@ -313,7 +313,7 @@ class GraphTest {
     @Test
     void builderDestinationsSetOnlyIncludesGraphStartWhenNoExits() {
         BlockPos graphStart = new BlockPos(0, 0, 0);
-        Cell startCell = Cell.fromHubPosition(graphStart);
+        Cell startCell = Cell.fromWorldPosition(graphStart);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(graphStart)
@@ -326,36 +326,38 @@ class GraphTest {
     }
 
     @Test
-    void getCellReturnsCorrectCell() {
-        BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+    void getCellAtReturnsCorrectCellForPosition() {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
-            .setGraphStart(hub)
+            .setGraphStart(pos)
             .addCell(cell)
             .build();
 
-        assertEquals(cell, graph.getCell(hub));
+        assertEquals(cell, graph.getCellAt(pos));
+        assertEquals(cell, graph.getCellAt(new BlockPos(0, 0, 0)));
+        assertEquals(cell, graph.getCellAt(new BlockPos(3, 3, 3)));
     }
 
     @Test
-    void getCellReturnsNullForNonExistentHub() {
-        BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+    void getCellAtReturnsNullForNonExistentPosition() {
+        BlockPos pos = new BlockPos(0, 0, 0);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
-            .setGraphStart(hub)
+            .setGraphStart(pos)
             .addCell(cell)
             .build();
 
-        assertNull(graph.getCell(new BlockPos(100, 100, 100)));
+        assertNull(graph.getCellAt(new BlockPos(100, 100, 100)));
     }
 
     @Test
     void getIdReturnsCorrectId() {
         BlockPos id = new BlockPos(10, 20, 30);
         BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+        Cell cell = Cell.fromWorldPosition(hub);
 
         Graph graph = Graph.builder(id, EntityType.BAT)
             .setGraphStart(hub)
@@ -368,7 +370,7 @@ class GraphTest {
     @Test
     void getEntityTypeReturnsCorrectType() {
         BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+        Cell cell = Cell.fromWorldPosition(hub);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub)
@@ -382,8 +384,8 @@ class GraphTest {
     void getCellsReturnsUnmodifiableMap() {
         BlockPos hub1 = new BlockPos(0, 0, 0);
         BlockPos hub2 = new BlockPos(8, 8, 8);
-        Cell cell1 = Cell.fromHubPosition(hub1);
-        Cell cell2 = Cell.fromHubPosition(hub2);
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(hub1)
@@ -392,14 +394,14 @@ class GraphTest {
             .build();
 
         assertEquals(2, graph.getCells().size());
-        assertEquals(cell1, graph.getCells().get(hub1));
-        assertEquals(cell2, graph.getCells().get(hub2));
+        assertEquals(cell1, graph.getCells().get(cell1.getGridKey()));
+        assertEquals(cell2, graph.getCells().get(cell2.getGridKey()));
     }
 
     @Test
     void getGraphStartReturnsCorrectPosition() {
         BlockPos graphStart = new BlockPos(5, 10, 15);
-        Cell cell = Cell.fromHubPosition(graphStart);
+        Cell cell = Cell.fromWorldPosition(graphStart);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(graphStart)
@@ -415,9 +417,9 @@ class GraphTest {
         BlockPos exit1 = new BlockPos(8, 8, 8);
         BlockPos exit2 = new BlockPos(16, 16, 16);
 
-        Cell startCell = Cell.fromHubPosition(graphStart);
-        Cell exitCell1 = Cell.fromHubPosition(exit1);
-        Cell exitCell2 = Cell.fromHubPosition(exit2);
+        Cell startCell = Cell.fromWorldPosition(graphStart);
+        Cell exitCell1 = Cell.fromWorldPosition(exit1);
+        Cell exitCell2 = Cell.fromWorldPosition(exit2);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(graphStart)
@@ -439,8 +441,8 @@ class GraphTest {
         BlockPos graphStart = new BlockPos(0, 0, 0);
         BlockPos exit = new BlockPos(8, 8, 8);
 
-        Cell startCell = Cell.fromHubPosition(graphStart);
-        Cell exitCell = Cell.fromHubPosition(exit);
+        Cell startCell = Cell.fromWorldPosition(graphStart);
+        Cell exitCell = Cell.fromWorldPosition(exit);
 
         Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
             .setGraphStart(graphStart)
@@ -454,5 +456,153 @@ class GraphTest {
 
         Set<BlockPos> copy = new HashSet<>(destinations);
         assertEquals(destinations, copy);
+    }
+
+    @Test
+    void getHubsForCellReturnsAllInboundNextHops() {
+        BlockPos hub1 = new BlockPos(0, 0, 0);
+        BlockPos hub2 = new BlockPos(8, 8, 8);
+        BlockPos hub3 = new BlockPos(16, 16, 16);
+        BlockPos nextHop1 = new BlockPos(8, 9, 9);
+        BlockPos nextHop2 = new BlockPos(10, 10, 10);
+
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+
+        cell1.setPath(hub3, nextHop1);
+        cell3.setPath(hub1, nextHop2);
+
+        Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
+            .setGraphStart(hub1)
+            .addGraphExit(hub3)
+            .addCell(cell1)
+            .addCell(cell2)
+            .addCell(cell3)
+            .build();
+
+        Set<BlockPos> hubs = graph.getHubsForCell(cell2);
+        assertEquals(2, hubs.size());
+        assertTrue(hubs.contains(nextHop1));
+        assertTrue(hubs.contains(nextHop2));
+    }
+
+    @Test
+    void getHubsForCellReturnsEmptySetWhenNoInboundPaths() {
+        BlockPos hub1 = new BlockPos(0, 0, 0);
+        BlockPos hub2 = new BlockPos(8, 8, 8);
+        BlockPos hub3 = new BlockPos(16, 16, 16);
+
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+
+        cell1.setPath(hub1, null);
+        cell2.setPath(hub1, hub1);
+        cell3.setPath(hub1, hub2);
+
+        Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
+            .setGraphStart(hub1)
+            .addCell(cell1)
+            .addCell(cell2)
+            .addCell(cell3)
+            .build();
+
+        Set<BlockPos> hubs = graph.getHubsForCell(cell3);
+        assertTrue(hubs.isEmpty());
+    }
+
+    @Test
+    void getHubsForCellReturnsMultipleHubsWhenRoutesDiverge() {
+        BlockPos hub1 = new BlockPos(0, 0, 0);
+        BlockPos hub2 = new BlockPos(8, 8, 8);
+        BlockPos hub3 = new BlockPos(16, 16, 16);
+        BlockPos exit1 = new BlockPos(24, 24, 24);
+        BlockPos exit2 = new BlockPos(32, 32, 32);
+        BlockPos nextHopToExit1 = new BlockPos(8, 8, 8);
+        BlockPos nextHopToExit2 = new BlockPos(10, 10, 10);
+
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+        Cell exitCell1 = Cell.fromWorldPosition(exit1);
+        Cell exitCell2 = Cell.fromWorldPosition(exit2);
+
+        cell1.setPath(exit1, nextHopToExit1);
+        cell1.setPath(exit2, nextHopToExit2);
+        cell3.setPath(exit1, nextHopToExit1);
+        cell3.setPath(exit2, nextHopToExit2);
+
+        Graph graph = Graph.builder(new BlockPos(0, 0, 0), EntityType.BAT)
+            .setGraphStart(hub1)
+            .addGraphExit(exit1)
+            .addGraphExit(exit2)
+            .addCell(cell1)
+            .addCell(cell2)
+            .addCell(cell3)
+            .addCell(exitCell1)
+            .addCell(exitCell2)
+            .build();
+
+        Set<BlockPos> hubs = graph.getHubsForCell(cell2);
+        assertEquals(2, hubs.size());
+        assertTrue(hubs.contains(nextHopToExit1));
+        assertTrue(hubs.contains(nextHopToExit2));
+    }
+
+    @Test
+    void saveAndLoadPreservesGraphStructure() {
+        BlockPos id = new BlockPos(5, 10, 15);
+        BlockPos hub1 = new BlockPos(4, 4, 4);
+        BlockPos hub2 = new BlockPos(8, 8, 8);
+        BlockPos hub3 = new BlockPos(16, 16, 16);
+        BlockPos exit1 = new BlockPos(24, 24, 24);
+
+        Cell cell1 = Cell.fromWorldPosition(hub1);
+        Cell cell2 = Cell.fromWorldPosition(hub2);
+        Cell cell3 = Cell.fromWorldPosition(hub3);
+        Cell exitCell = Cell.fromWorldPosition(exit1);
+
+        cell1.setPath(hub1, null);
+        cell1.setPath(exit1, hub2);
+        cell2.setPath(hub1, hub1);
+        cell2.setPath(exit1, hub3);
+        cell3.setPath(hub1, hub2);
+        cell3.setPath(exit1, exit1);
+        exitCell.setPath(hub1, hub3);
+        exitCell.setPath(exit1, null);
+
+        Graph original = Graph.builder(id, EntityType.BAT)
+            .setGraphStart(hub1)
+            .addGraphExit(exit1)
+            .addCell(cell1)
+            .addCell(cell2)
+            .addCell(cell3)
+            .addCell(exitCell)
+            .build();
+
+        Graph loaded = Graph.load(original.save());
+
+        assertNotNull(loaded);
+        assertEquals(original.getId(), loaded.getId());
+        assertEquals(original.getEntityType(), loaded.getEntityType());
+        assertEquals(original.getGraphStart(), loaded.getGraphStart());
+        assertEquals(original.getGraphExits(), loaded.getGraphExits());
+        assertEquals(original.getCells().size(), loaded.getCells().size());
+
+        for (BlockPos gridKey : original.getCells().keySet()) {
+            Cell originalCell = original.getCells().get(gridKey);
+            Cell loadedCell = loaded.getCells().get(gridKey);
+
+            assertNotNull(loadedCell);
+            assertEquals(originalCell.getGridKey(), loadedCell.getGridKey());
+            assertEquals(originalCell.getBounds().minX, loadedCell.getBounds().minX);
+            assertEquals(originalCell.getBounds().minY, loadedCell.getBounds().minY);
+            assertEquals(originalCell.getBounds().minZ, loadedCell.getBounds().minZ);
+            assertEquals(originalCell.getBounds().maxX, loadedCell.getBounds().maxX);
+            assertEquals(originalCell.getBounds().maxY, loadedCell.getBounds().maxY);
+            assertEquals(originalCell.getBounds().maxZ, loadedCell.getBounds().maxZ);
+            assertEquals(originalCell.getPaths(), loadedCell.getPaths());
+        }
     }
 }

@@ -10,6 +10,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import org.sosly.ecotale.client.GraphDebugRenderer;
 import org.sosly.ecotale.navigation.Cell;
+import org.sosly.ecotale.navigation.Graph;
 
 public class GraphDebugPacket {
     private final BlockPos id;
@@ -60,14 +61,20 @@ public class GraphDebugPacket {
         buf.writeVarInt(cells.size());
         for (CellData cellData : cells.values()) {
             buf.writeLong(cellData.boundsMin.asLong());
-            buf.writeLong(cellData.boundsMax.asLong());
-            buf.writeBlockPos(cellData.hub);
+
+            buf.writeVarInt(cellData.hubs.size());
+            for (BlockPos hub : cellData.hubs) {
+                buf.writeBlockPos(hub);
+            }
 
             buf.writeVarInt(cellData.paths.size());
             for (Map.Entry<BlockPos, BlockPos> entry : cellData.paths.entrySet()) {
                 buf.writeBlockPos(entry.getKey());
                 BlockPos nextHop = entry.getValue();
-                buf.writeBlockPos(nextHop != null ? nextHop : BlockPos.ZERO);
+                buf.writeBoolean(nextHop != null);
+                if (nextHop != null) {
+                    buf.writeBlockPos(nextHop);
+                }
             }
         }
 
@@ -97,18 +104,28 @@ public class GraphDebugPacket {
         Map<BlockPos, CellData> cells = new HashMap<>();
         for (int i = 0; i < cellCount; i++) {
             BlockPos boundsMin = BlockPos.of(buf.readLong());
-            BlockPos boundsMax = BlockPos.of(buf.readLong());
-            BlockPos hub = buf.readBlockPos();
+            BlockPos boundsMax = new BlockPos(
+                boundsMin.getX() + Cell.RESOLUTION,
+                boundsMin.getY() + Cell.RESOLUTION,
+                boundsMin.getZ() + Cell.RESOLUTION
+            );
+
+            int hubCount = buf.readVarInt();
+            Set<BlockPos> hubs = new HashSet<>();
+            for (int j = 0; j < hubCount; j++) {
+                hubs.add(buf.readBlockPos());
+            }
 
             Map<BlockPos, BlockPos> paths = new HashMap<>();
             int pathCount = buf.readVarInt();
             for (int j = 0; j < pathCount; j++) {
                 BlockPos dest = buf.readBlockPos();
-                BlockPos nextHop = buf.readBlockPos();
-                paths.put(dest, nextHop.equals(BlockPos.ZERO) ? null : nextHop);
+                boolean hasNextHop = buf.readBoolean();
+                BlockPos nextHop = hasNextHop ? buf.readBlockPos() : null;
+                paths.put(dest, nextHop);
             }
 
-            cells.put(hub, new CellData(boundsMin, boundsMax, hub, paths));
+            cells.put(boundsMin, new CellData(boundsMin, boundsMax, hubs, paths));
         }
 
         int highlightCount = buf.readVarInt();
@@ -132,17 +149,17 @@ public class GraphDebugPacket {
     public static class CellData {
         public final BlockPos boundsMin;
         public final BlockPos boundsMax;
-        public final BlockPos hub;
+        public final Set<BlockPos> hubs;
         public final Map<BlockPos, BlockPos> paths;
 
-        public CellData(BlockPos boundsMin, BlockPos boundsMax, BlockPos hub, Map<BlockPos, BlockPos> paths) {
+        public CellData(BlockPos boundsMin, BlockPos boundsMax, Set<BlockPos> hubs, Map<BlockPos, BlockPos> paths) {
             this.boundsMin = boundsMin;
             this.boundsMax = boundsMax;
-            this.hub = hub;
+            this.hubs = hubs;
             this.paths = paths;
         }
 
-        public static CellData fromCell(Cell cell) {
+        public static CellData fromCell(Cell cell, Graph graph) {
             BlockPos boundsMin = new BlockPos(
                 (int) cell.getBounds().minX,
                 (int) cell.getBounds().minY,
@@ -153,7 +170,8 @@ public class GraphDebugPacket {
                 (int) cell.getBounds().maxY,
                 (int) cell.getBounds().maxZ
             );
-            return new CellData(boundsMin, boundsMax, cell.getHub(), new HashMap<>(cell.getPaths()));
+            Set<BlockPos> hubs = graph.getHubsForCell(cell);
+            return new CellData(boundsMin, boundsMax, hubs, new HashMap<>(cell.getPaths()));
         }
     }
 }

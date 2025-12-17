@@ -13,26 +13,26 @@ import net.minecraft.world.phys.Vec3;
 public final class Validators {
     private Validators() {}
 
-    public static boolean isCellTransitionValid(Level level, Cell from, Cell to, Entity entity) {
+    public static boolean isCellTransitionValid(Level level, Cell from, Cell to,
+                                                 BlockPos fromHub, BlockPos toHub, Entity entity) {
         Direction direction = getDirectionBetweenCells(from, to);
         if (direction == null) {
             return false;
         }
 
-        int resolution = Cell.RESOLUTION;
         BlockPos boundaryStart = getBoundaryStart(from, direction);
 
-        BlockPos[] samples = getSamplePositions(boundaryStart, direction, resolution);
+        BlockPos[] samples = getSamplePositions(boundaryStart, direction);
         for (BlockPos sample : samples) {
-            if (checkCrossing(level, sample, direction, from.getHub(), to.getHub(), entity)) {
+            if (checkCrossing(level, sample, direction, fromHub, toHub, entity)) {
                 return true;
             }
         }
 
-        for (int u = 0; u < resolution; u++) {
-            for (int v = 0; v < resolution; v++) {
+        for (int u = 0; u < Cell.RESOLUTION; u++) {
+            for (int v = 0; v < Cell.RESOLUTION; v++) {
                 BlockPos pos = getPositionOnBoundary(boundaryStart, direction, u, v);
-                if (checkCrossing(level, pos, direction, from.getHub(), to.getHub(), entity)) {
+                if (checkCrossing(level, pos, direction, fromHub, toHub, entity)) {
                     return true;
                 }
             }
@@ -112,9 +112,9 @@ public final class Validators {
         return null;
     }
 
-    private static BlockPos[] getSamplePositions(BlockPos boundaryStart, Direction direction, int resolution) {
-        int mid = resolution / 2;
-        int max = resolution - 1;
+    private static BlockPos[] getSamplePositions(BlockPos boundaryStart, Direction direction) {
+        int mid = Cell.RESOLUTION / 2;
+        int max = Cell.RESOLUTION - 1;
 
         return new BlockPos[] {
             getPositionOnBoundary(boundaryStart, direction, mid, mid),
@@ -130,18 +130,17 @@ public final class Validators {
     }
 
     private static BlockPos getBoundaryStart(Cell cell, Direction direction) {
-        int resolution = Cell.RESOLUTION;
         AABB bounds = cell.getBounds();
         int baseX = (int) bounds.minX;
         int baseY = (int) bounds.minY;
         int baseZ = (int) bounds.minZ;
 
         return switch (direction) {
-            case EAST -> new BlockPos(baseX + resolution - 1, baseY, baseZ);
+            case EAST -> new BlockPos(baseX + Cell.RESOLUTION - 1, baseY, baseZ);
             case WEST -> new BlockPos(baseX, baseY, baseZ);
-            case UP -> new BlockPos(baseX, baseY + resolution - 1, baseZ);
+            case UP -> new BlockPos(baseX, baseY + Cell.RESOLUTION - 1, baseZ);
             case DOWN -> new BlockPos(baseX, baseY, baseZ);
-            case SOUTH -> new BlockPos(baseX, baseY, baseZ + resolution - 1);
+            case SOUTH -> new BlockPos(baseX, baseY, baseZ + Cell.RESOLUTION - 1);
             case NORTH -> new BlockPos(baseX, baseY, baseZ);
         };
     }

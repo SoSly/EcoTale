@@ -99,63 +99,70 @@ public final class GraphDebugRenderer {
         RenderSystem.disableBlend();
     }
 
+    private static boolean cellContains(GraphDebugPacket.CellData cellData, Set<BlockPos> positions) {
+        return positions.stream().anyMatch(pos ->
+            pos.getX() >= cellData.boundsMin.getX() && pos.getX() < cellData.boundsMax.getX()
+                && pos.getY() >= cellData.boundsMin.getY() && pos.getY() < cellData.boundsMax.getY()
+                && pos.getZ() >= cellData.boundsMin.getZ() && pos.getZ() < cellData.boundsMax.getZ()
+        );
+    }
+
+    private static float[] getCellColor(boolean isGraphStart, boolean isGraphExit, boolean isHighlighted) {
+        if (isGraphStart) {
+            return new float[]{GRAPH_START_R, GRAPH_START_G, GRAPH_START_B};
+        }
+        if (isGraphExit) {
+            return new float[]{GRAPH_EXIT_R, GRAPH_EXIT_G, GRAPH_EXIT_B};
+        }
+        if (isHighlighted) {
+            return new float[]{HIGHLIGHT_R, HIGHLIGHT_G, HIGHLIGHT_B};
+        }
+        return new float[]{CELL_R, CELL_G, CELL_B};
+    }
+
     private static void renderGraph(BufferBuilder buffer, Matrix4f matrix, GraphData graphData) {
         for (GraphDebugPacket.CellData cellData : graphData.cells.values()) {
-            boolean isGraphStart = cellData.hub.equals(graphData.graphStart);
-            boolean isGraphExit = graphData.graphExits.contains(cellData.hub);
-            boolean isHighlighted = graphData.highlightedPath.contains(cellData.hub);
+            boolean isGraphStart = cellData.hubs.stream().anyMatch(hub -> hub.equals(graphData.graphStart));
+            boolean isGraphExit = cellContains(cellData, graphData.graphExits);
+            boolean isHighlighted = cellData.hubs.stream().anyMatch(hub -> graphData.highlightedPath.contains(hub));
 
-            float cellR;
-            float cellG;
-            float cellB;
+            float[] cellColor = getCellColor(isGraphStart, isGraphExit, isHighlighted);
+            renderCellBoundingBox(buffer, matrix, cellData.boundsMin, cellData.boundsMax,
+                cellColor[0], cellColor[1], cellColor[2]);
 
-            if (isGraphStart) {
-                cellR = GRAPH_START_R;
-                cellG = GRAPH_START_G;
-                cellB = GRAPH_START_B;
-            } else if (isGraphExit) {
-                cellR = GRAPH_EXIT_R;
-                cellG = GRAPH_EXIT_G;
-                cellB = GRAPH_EXIT_B;
-            } else if (isHighlighted) {
-                cellR = HIGHLIGHT_R;
-                cellG = HIGHLIGHT_G;
-                cellB = HIGHLIGHT_B;
-            } else {
-                cellR = CELL_R;
-                cellG = CELL_G;
-                cellB = CELL_B;
+            for (BlockPos hub : cellData.hubs) {
+                renderHub(buffer, matrix, hub, HUB_R, HUB_G, HUB_B);
             }
 
-            renderCellBoundingBox(buffer, matrix, cellData.boundsMin, cellData.boundsMax, cellR, cellG, cellB);
-            renderHub(buffer, matrix, cellData.hub, HUB_R, HUB_G, HUB_B);
+            for (BlockPos hub : cellData.hubs) {
+                Map<BlockPos, float[]> edgeColors = new HashMap<>();
+                int destIndex = 0;
+                int destCount = cellData.paths.size();
 
-            Map<BlockPos, float[]> edgeColors = new HashMap<>();
-            int exitIndex = 0;
-            int exitCount = graphData.graphExits.size();
-
-            for (BlockPos exitHub : graphData.graphExits) {
-                BlockPos nextHop = cellData.paths.get(exitHub);
-                if (nextHop != null) {
-                    float[] exitColor = hueToRgb((float) exitIndex / exitCount);
-                    float[] existing = edgeColors.get(nextHop);
-                    if (existing == null) {
-                        edgeColors.put(nextHop, new float[]{exitColor[0], exitColor[1], exitColor[2], 1});
-                    } else {
-                        existing[0] += exitColor[0];
-                        existing[1] += exitColor[1];
-                        existing[2] += exitColor[2];
-                        existing[3] += 1;
+                for (Map.Entry<BlockPos, BlockPos> pathEntry : cellData.paths.entrySet()) {
+                    BlockPos destination = pathEntry.getKey();
+                    BlockPos nextHop = pathEntry.getValue();
+                    if (nextHop != null) {
+                        float[] destColor = hueToRgb((float) destIndex / destCount);
+                        float[] existing = edgeColors.get(nextHop);
+                        if (existing == null) {
+                            edgeColors.put(nextHop, new float[]{destColor[0], destColor[1], destColor[2], 1});
+                        } else {
+                            existing[0] += destColor[0];
+                            existing[1] += destColor[1];
+                            existing[2] += destColor[2];
+                            existing[3] += 1;
+                        }
                     }
+                    destIndex++;
                 }
-                exitIndex++;
-            }
 
-            for (Map.Entry<BlockPos, float[]> entry : edgeColors.entrySet()) {
-                float[] color = entry.getValue();
-                float count = color[3];
-                renderEdge(buffer, matrix, cellData.hub, entry.getKey(),
-                    color[0] / count, color[1] / count, color[2] / count);
+                for (Map.Entry<BlockPos, float[]> entry : edgeColors.entrySet()) {
+                    float[] color = entry.getValue();
+                    float count = color[3];
+                    renderEdge(buffer, matrix, hub, entry.getKey(),
+                        color[0] / count, color[1] / count, color[2] / count);
+                }
             }
         }
     }

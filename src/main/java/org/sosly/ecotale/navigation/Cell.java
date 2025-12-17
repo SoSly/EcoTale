@@ -9,34 +9,31 @@ import net.minecraft.world.phys.AABB;
 /**
  * A navigation cell representing a 4×4×4 block region with routing information.
  *
- * <p>Each cell contains a navigable waypoint (hub) and knows how to route toward
- * any destination in the navigation graph. Cells are created during graph generation
- * and store precomputed paths to all known destinations.</p>
+ * <p>Cells store precomputed paths to all known destinations. Hubs (navigable
+ * waypoints) are derived from the path entries rather than stored explicitly.</p>
  */
 public class Cell {
     public static final int RESOLUTION = 4;
 
     private final AABB bounds;
-    private final BlockPos hub;
     private final Map<BlockPos, BlockPos> paths;
 
-    public Cell(AABB bounds, BlockPos hub) {
+    public Cell(AABB bounds) {
         this.bounds = bounds;
-        this.hub = hub;
         this.paths = new HashMap<>();
     }
 
     /**
-     * Creates a cell from a hub position by computing the 4×4×4 grid cell bounds
-     * that contain the hub.
+     * Creates a cell from any world position by computing the 4×4×4 grid cell bounds
+     * that contain the position.
      *
-     * @param hub the navigable waypoint within the cell
+     * @param worldPos any position within the desired cell
      * @return a new cell with computed bounds
      */
-    public static Cell fromHubPosition(BlockPos hub) {
-        int minX = Math.floorDiv(hub.getX(), RESOLUTION) * RESOLUTION;
-        int minY = Math.floorDiv(hub.getY(), RESOLUTION) * RESOLUTION;
-        int minZ = Math.floorDiv(hub.getZ(), RESOLUTION) * RESOLUTION;
+    public static Cell fromWorldPosition(BlockPos worldPos) {
+        int minX = Math.floorDiv(worldPos.getX(), RESOLUTION) * RESOLUTION;
+        int minY = Math.floorDiv(worldPos.getY(), RESOLUTION) * RESOLUTION;
+        int minZ = Math.floorDiv(worldPos.getZ(), RESOLUTION) * RESOLUTION;
 
         AABB bounds = new AABB(
             minX,
@@ -47,7 +44,7 @@ public class Cell {
             minZ + RESOLUTION
         );
 
-        return new Cell(bounds, hub);
+        return new Cell(bounds);
     }
 
     /**
@@ -66,19 +63,15 @@ public class Cell {
         return bounds;
     }
 
-    public BlockPos getHub() {
-        return hub;
-    }
-
     /**
-     * Returns the grid-aligned identifier for this cell.
+     * Returns the grid-aligned key for this cell.
      *
-     * <p>Two cells covering the same 4×4×4 region will have the same grid ID,
-     * regardless of hub position. Use this for deduplication during graph generation.</p>
+     * <p>This key uniquely identifies the cell's 4×4×4 region in the graph.
+     * Two cells covering the same region will have the same grid key.</p>
      *
      * @return the min corner of the cell bounds as a BlockPos
      */
-    public BlockPos getGridId() {
+    public BlockPos getGridKey() {
         return new BlockPos((int) bounds.minX, (int) bounds.minY, (int) bounds.minZ);
     }
 

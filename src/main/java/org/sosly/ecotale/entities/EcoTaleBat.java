@@ -3,6 +3,7 @@ package org.sosly.ecotale.entities;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -15,9 +16,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.FlyingMoveControl;
+import org.sosly.ecotale.entities.ai.control.FlyingMobMoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
+import org.sosly.ecotale.entities.ai.navigation.BatPathNavigation;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ambient.Bat;
@@ -55,7 +56,7 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
 
     public EcoTaleBat(EntityType<? extends Bat> entityType, Level level) {
         super(entityType, level);
-        this.moveControl = new FlyingMoveControl(this, 20, true);
+        this.moveControl = new FlyingMobMoveControl(this, 20, true);
         this.setPathfindingMalus(BlockPathTypes.WATER, -1.0F);
         this.setPathfindingMalus(BlockPathTypes.LAVA, -1.0F);
         this.setPathfindingMalus(BlockPathTypes.DANGER_FIRE, -1.0F);
@@ -70,8 +71,8 @@ public class EcoTaleBat extends Bat implements IFlyingMob<EcoTaleBat> {
     }
 
     @Override
-    protected @NotNull FlyingPathNavigation createNavigation(@NotNull Level level) {
-        FlyingPathNavigation nav = new FlyingPathNavigation(this, level);
+    protected @NotNull BatPathNavigation createNavigation(@NotNull Level level) {
+        BatPathNavigation nav = new BatPathNavigation(this, level);
         nav.setCanOpenDoors(false);
         nav.setCanFloat(false);
         nav.setCanPassDoors(true);

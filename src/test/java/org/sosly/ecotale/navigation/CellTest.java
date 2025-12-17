@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 class CellTest {
 
     @Test
-    void fromHubPositionComputesBoundsForPositiveCoordinates() {
-        BlockPos hub = new BlockPos(5, 10, 15);
-        Cell cell = Cell.fromHubPosition(hub);
+    void fromWorldPositionComputesBoundsForPositiveCoordinates() {
+        BlockPos pos = new BlockPos(5, 10, 15);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertEquals(4.0, bounds.minX);
@@ -24,13 +24,12 @@ class CellTest {
         assertEquals(8.0, bounds.maxX);
         assertEquals(12.0, bounds.maxY);
         assertEquals(16.0, bounds.maxZ);
-        assertEquals(hub, cell.getHub());
     }
 
     @Test
-    void fromHubPositionUsesFloorDivForNegativeCoordinates() {
-        BlockPos hub = new BlockPos(-1, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+    void fromWorldPositionUsesFloorDivForNegativeCoordinates() {
+        BlockPos pos = new BlockPos(-1, 0, 0);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertEquals(-4.0, bounds.minX);
@@ -39,13 +38,12 @@ class CellTest {
         assertEquals(0.0, bounds.maxX);
         assertEquals(4.0, bounds.maxY);
         assertEquals(4.0, bounds.maxZ);
-        assertEquals(hub, cell.getHub());
     }
 
     @Test
-    void fromHubPositionWorksForHubAtCellCenter() {
-        BlockPos hub = new BlockPos(2, 2, 2);
-        Cell cell = Cell.fromHubPosition(hub);
+    void fromWorldPositionWorksForPositionAtCellCenter() {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertEquals(0.0, bounds.minX);
@@ -57,9 +55,9 @@ class CellTest {
     }
 
     @Test
-    void fromHubPositionWorksForHubAtCellEdge() {
-        BlockPos hub = new BlockPos(0, 0, 0);
-        Cell cell = Cell.fromHubPosition(hub);
+    void fromWorldPositionWorksForPositionAtCellEdge() {
+        BlockPos pos = new BlockPos(0, 0, 0);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertEquals(0.0, bounds.minX);
@@ -71,9 +69,9 @@ class CellTest {
     }
 
     @Test
-    void fromHubPositionWorksForNegativeHubAtCellEdge() {
-        BlockPos hub = new BlockPos(-4, -8, -12);
-        Cell cell = Cell.fromHubPosition(hub);
+    void fromWorldPositionWorksForNegativePositionAtCellEdge() {
+        BlockPos pos = new BlockPos(-4, -8, -12);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertEquals(-4.0, bounds.minX);
@@ -86,7 +84,7 @@ class CellTest {
 
     @Test
     void containsReturnsTrueForPositionInsideCell() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(2, 2, 2));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(2, 2, 2));
 
         assertTrue(cell.contains(new BlockPos(0, 0, 0)));
         assertTrue(cell.contains(new BlockPos(2, 2, 2)));
@@ -95,7 +93,7 @@ class CellTest {
 
     @Test
     void containsReturnsFalseForPositionOutsideCell() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(2, 2, 2));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(2, 2, 2));
 
         assertFalse(cell.contains(new BlockPos(4, 0, 0)));
         assertFalse(cell.contains(new BlockPos(0, 4, 0)));
@@ -106,7 +104,7 @@ class CellTest {
 
     @Test
     void containsMinCoordinatesAreInclusive() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(2, 2, 2));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(2, 2, 2));
 
         assertTrue(cell.contains(new BlockPos(0, 0, 0)));
         assertTrue(cell.contains(new BlockPos(0, 1, 1)));
@@ -116,7 +114,7 @@ class CellTest {
 
     @Test
     void containsMaxCoordinatesAreExclusive() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(2, 2, 2));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(2, 2, 2));
 
         assertFalse(cell.contains(new BlockPos(4, 0, 0)));
         assertFalse(cell.contains(new BlockPos(0, 4, 0)));
@@ -126,7 +124,7 @@ class CellTest {
 
     @Test
     void containsWorksForNegativeCoordinates() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(-2, -2, -2));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(-2, -2, -2));
 
         assertTrue(cell.contains(new BlockPos(-4, -4, -4)));
         assertTrue(cell.contains(new BlockPos(-2, -2, -2)));
@@ -137,7 +135,7 @@ class CellTest {
 
     @Test
     void setPathStoresDestinationAndNextHop() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(0, 0, 0));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(0, 0, 0));
         BlockPos destination = new BlockPos(10, 10, 10);
         BlockPos nextHop = new BlockPos(4, 4, 4);
 
@@ -148,7 +146,7 @@ class CellTest {
 
     @Test
     void setPathSupportsNullNextHopForDestinationCell() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(0, 0, 0));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(0, 0, 0));
         BlockPos destination = new BlockPos(0, 0, 0);
 
         cell.setPath(destination, null);
@@ -159,7 +157,7 @@ class CellTest {
 
     @Test
     void getPathsReturnsUnmodifiableMap() {
-        Cell cell = Cell.fromHubPosition(new BlockPos(0, 0, 0));
+        Cell cell = Cell.fromWorldPosition(new BlockPos(0, 0, 0));
         BlockPos destination = new BlockPos(10, 10, 10);
         BlockPos nextHop = new BlockPos(4, 4, 4);
 
@@ -171,8 +169,8 @@ class CellTest {
 
     @Test
     void getBoundsReturnsCorrectAABB() {
-        BlockPos hub = new BlockPos(5, 10, 15);
-        Cell cell = Cell.fromHubPosition(hub);
+        BlockPos pos = new BlockPos(5, 10, 15);
+        Cell cell = Cell.fromWorldPosition(pos);
 
         AABB bounds = cell.getBounds();
         assertNotNull(bounds);
@@ -185,10 +183,10 @@ class CellTest {
     }
 
     @Test
-    void getHubReturnsCorrectPosition() {
-        BlockPos hub = new BlockPos(5, 10, 15);
-        Cell cell = Cell.fromHubPosition(hub);
+    void getGridKeyReturnsCorrectPosition() {
+        BlockPos pos = new BlockPos(5, 10, 15);
+        Cell cell = Cell.fromWorldPosition(pos);
 
-        assertEquals(hub, cell.getHub());
+        assertEquals(new BlockPos(4, 8, 12), cell.getGridKey());
     }
 }
